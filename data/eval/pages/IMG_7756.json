@@ -1,0 +1,19 @@
+{
+  "page_id": "IMG_7756",
+  "source": "handwritten notes/IMG_7756.heic",
+  "surface": "notebook",
+  "text": "PROBLEM - 3 Square both sides Take reciprocal and then square root Exponentiate: Solve for",
+  "formulas": [
+    "\\sqrt{\\mu_i} = \\beta_0 + \\beta_1 x_i",
+    "\\mu_i = (\\beta_0 + \\beta_1 x_i)^2",
+    "\\frac{1}{\\mu_i^2} = \\beta_0 + \\beta_1 x_{i,1} + \\beta_2 x_{i,2}",
+    "\\mu_i^2 = \\frac{1}{\\beta_0 + \\beta_1 x_{i,1} + \\beta_2 x_{i,2}}",
+    "\\mu_i = \\frac{1}{\\sqrt{\\beta_0 + \\beta_1 x_{i,1} + \\beta_2 x_{i,2}}}",
+    "\\log\\left(\\frac{\\mu_i}{1-\\mu_i}\\right) = \\beta_0 + \\beta_1 x_i",
+    "\\frac{\\mu_i}{1-\\mu_i} = e^{(\\beta_0 + \\beta_1 x_i)}",
+    "\\mu_i = \\frac{e^{(\\beta_0 + \\beta_1 x_i)}}{1 + e^{(\\beta_0 + \\beta_1 x_i)}}",
+    "\\mu_i = \\frac{1}{1 + e^{-(\\beta_0 + \\beta_1 x_i)}}"
+  ],
+  "licence": "personal",
+  "note": "Link-function algebra. Dense notation, almost no prose. Every expression uses mu, which one preprocessing setting misread as M."
+}

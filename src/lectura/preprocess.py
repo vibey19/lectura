@@ -190,8 +190,18 @@ def boost_contrast(image: Image.Image, clip_limit: float = 2.0) -> Image.Image:
 def suppress_ruling(image: Image.Image, keep: float = 0.55) -> Image.Image:
     """Fade printed grid and ruled lines while leaving ink alone.
 
-    Ruling is low-saturation and much lighter than handwriting, so it can be
-    attenuated by lifting only pixels that are mid-tone and weakly coloured.
+    Off by default. The idea is sound - ruling is lighter and less saturated
+    than ink - but measured against reference transcriptions it consistently
+    cost formula accuracy, in both configurations tested: formula error rose
+    from 0.321 to 0.370 without illumination correction and from 0.224 to 0.273
+    with it, and exact formula matches fell from 6 to 0.
+
+    The likely cause is that a thin pen stroke antialiases to exactly the
+    mid-tone, weakly coloured values this targets, so parts of the handwriting
+    are lifted along with the grid.
+
+    Measured on two pages only. Enough to justify not running it by default,
+    not enough to call it settled.
     """
     lab = cv2.cvtColor(_to_cv(image), cv2.COLOR_BGR2LAB)
     lightness = lab[:, :, 0].astype(np.float32)
@@ -211,7 +221,7 @@ def preprocess(
     *,
     dewarp: bool = True,
     illumination: bool = True,
-    ruling: bool = True,
+    ruling: bool = False,
     contrast: bool = False,
 ) -> PreprocessResult:
     """Run the correction chain appropriate to the detected surface."""
@@ -230,6 +240,7 @@ def preprocess(
         image = flatten_illumination(image)
         steps.append("illumination")
 
+    # Opt-in: measured to cost formula accuracy. See suppress_ruling.
     # Ruled paper is a light-page phenomenon; chalk boards have no printed grid.
     if ruling and surface is Surface.LIGHT_PAGE:
         image = suppress_ruling(image)

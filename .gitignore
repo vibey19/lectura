@@ -1,5 +1,9 @@
 # data & models — never commit source images (privacy) or weights
-data/
+data/*
+!data/eval/
+data/eval/*
+!data/eval/pages/
+!data/eval/README.md
 handwritten notes/
 *.heic
 *.HEIC

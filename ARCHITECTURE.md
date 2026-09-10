@@ -75,16 +75,54 @@ augmentation cannot be quietly lost.
 can always show the user what a block was derived from, which is what makes an
 uncertain transcription reviewable instead of merely doubtful.
 
+## Evaluation
+
+`evaluate/` holds a labelled set and the metrics that score against it. Ground
+truth is written by reading the page, never by accepting model output.
+
+Text and mathematics are scored separately and never blended. The founding
+observation of this project is that classical OCR degrades with mathematical
+density while leaving prose intact; a single averaged number would conceal
+exactly that, and in practice CER has stayed flat across changes that moved
+formula accuracy by a factor of five.
+
+The primary formula metric is a **segmentation-independent** token edit distance:
+every expression on each side is concatenated and the two streams compared. A
+positional metric was tried first and scored a page at 0.895 - near-total
+failure - purely because the reference merged a three-line derivation that the
+model emitted as three lines. The same page scores 0.395 once line breaks stop
+counting as errors. A metric that punishes formatting will send you optimising
+the wrong thing.
+
+Positional exact-match is kept as a strict secondary signal.
+
 ## What preprocessing is measured to do
 
 Page detection went from 1 of 19 real photos to 19 of 19 when edge detection was
 replaced with brightness segmentation, and the corrected images are plainly
 better to look at. Neither of those is an accuracy claim.
 
-Compared on extraction output, preprocessing produced **no measurable quality
-improvement**: block and equation counts were identical or slightly worse than
-raw input. Its real benefit is that it makes a lower input resolution tolerable,
-which is worth about 30% of wall-clock time.
+Scored against reference transcriptions, preprocessing does **not** improve
+extraction. The best configuration measured roughly ties raw input:
+
+| Configuration | formula error | CER | exact |
+|---|---|---|---|
+| raw | 0.208 | 0.236 | 6/19 |
+| dewarp only | 0.321 | 0.504 | 6/19 |
+| dewarp + illumination | 0.224 | 0.230 | 6/19 |
+| dewarp + ruling | 0.370 | 0.504 | 0/19 |
+| everything | 0.273 | 0.230 | 0/19 |
+
+Illumination correction earns its place: it halves CER in both configurations
+containing it. Ruling suppression consistently costs formula accuracy and is now
+opt-in. The default chain is dewarp plus illumination.
+
+Preprocessing's real benefit is that it makes a lower input resolution
+tolerable, worth about 30% of wall-clock time, and it is a precondition for
+handling curved pages. It is not an accuracy win.
+
+Two pages is enough to catch a five-fold regression. It is not enough to settle
+anything, and these numbers should be re-measured as the set grows.
 
 One thing it did do was cause a regression. CLAHE contrast enhancement turned
 every handwritten mu on a statistics page into a capital M - twelve occurrences,

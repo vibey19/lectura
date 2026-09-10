@@ -70,6 +70,12 @@ def test_preprocess_reports_what_it_actually_did():
     assert result.surface is Surface.LIGHT_PAGE
 
 
+def test_ruling_suppression_is_off_by_default():
+    # Measured to cost formula accuracy: exact matches fell from 6 to 0.
+    assert "ruling" not in preprocess(_page_on_background()).steps
+    assert "ruling" in preprocess(_page_on_background(), ruling=True).steps
+
+
 def test_contrast_boost_is_off_by_default():
     # CLAHE turned every handwritten mu into a capital M on a real page.
     # It stays opt-in until something measures it helping.
@@ -78,7 +84,12 @@ def test_contrast_boost_is_off_by_default():
 
 
 def test_preprocess_steps_can_be_disabled():
-    result = preprocess(_page_on_background(), dewarp=False, ruling=False)
+    result = preprocess(_page_on_background(), dewarp=False, illumination=False)
     assert not result.page_found
     assert "dewarp" not in result.steps
-    assert "ruling" not in result.steps
+    assert "illumination" not in result.steps
+
+
+def test_default_chain_is_dewarp_and_illumination():
+    # The configuration that measured best: everything else is opt-in.
+    assert preprocess(_page_on_background()).steps == ["dewarp", "illumination"]
