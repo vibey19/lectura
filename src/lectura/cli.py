@@ -8,6 +8,7 @@ from pathlib import Path
 
 from lectura import ingest
 from lectura.extract import OllamaVLM, Tesseract
+from lectura.preprocess import preprocess
 from lectura.render import available_themes, write, write_json
 from lectura.schema import Note
 from lectura.structure import build_note
@@ -30,6 +31,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-m", "--model", default="qwen2.5vl:7b")
     parser.add_argument("--max-edge", type=int, default=2200,
                         help="downscale longest edge; drives latency (default: 2200)")
+    parser.add_argument("--no-preprocess", action="store_true",
+                        help="skip page detection, dewarp and lighting correction")
     return parser
 
 
@@ -50,7 +53,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"rendered {len(note.blocks)} blocks -> {path}")
         return 0
 
-    image = ingest.fit_within(ingest.load(args.source), args.max_edge)
+    image = ingest.load(args.source)
+    if not args.no_preprocess:
+        result = preprocess(image)
+        image = result.image
+        print(f"preprocess: {result.summary()}")
+    image = ingest.fit_within(image, args.max_edge)
+
     extractor = (
         Tesseract() if args.backend == "tesseract" else OllamaVLM(model=args.model)
     )
