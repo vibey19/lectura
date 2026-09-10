@@ -70,6 +70,13 @@ def test_preprocess_reports_what_it_actually_did():
     assert result.surface is Surface.LIGHT_PAGE
 
 
+def test_contrast_boost_is_off_by_default():
+    # CLAHE turned every handwritten mu into a capital M on a real page.
+    # It stays opt-in until something measures it helping.
+    assert "contrast" not in preprocess(_page_on_background()).steps
+    assert "contrast" in preprocess(_page_on_background(), contrast=True).steps
+
+
 def test_preprocess_steps_can_be_disabled():
     result = preprocess(_page_on_background(), dewarp=False, ruling=False)
     assert not result.page_found

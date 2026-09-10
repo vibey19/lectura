@@ -170,7 +170,17 @@ def flatten_illumination(image: Image.Image, strength: float = 0.8) -> Image.Ima
 
 
 def boost_contrast(image: Image.Image, clip_limit: float = 2.0) -> Image.Image:
-    """Local contrast via CLAHE on lightness. Gentle: no binarisation."""
+    """Local contrast via CLAHE on lightness.
+
+    Off by default, and it should stay off unless measured to help. On a page of
+    handwritten statistics it silently turned every mu into a capital M - CLAHE
+    amplifies local contrast tile by tile, which thickens and merges the thin
+    descender that distinguishes the two. Extraction reported no doubt at all.
+
+    An ablation over the correction chain isolated it: with contrast disabled the
+    same page read mu correctly 12 times; with it enabled, zero times and M 12
+    times. Illumination flattening and ruling suppression were both innocent.
+    """
     lab = cv2.cvtColor(_to_cv(image), cv2.COLOR_BGR2LAB)
     clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(8, 8))
     lab[:, :, 0] = clahe.apply(lab[:, :, 0])
@@ -202,7 +212,7 @@ def preprocess(
     dewarp: bool = True,
     illumination: bool = True,
     ruling: bool = True,
-    contrast: bool = True,
+    contrast: bool = False,
 ) -> PreprocessResult:
     """Run the correction chain appropriate to the detected surface."""
     surface = classify_surface(image)
@@ -225,6 +235,7 @@ def preprocess(
         image = suppress_ruling(image)
         steps.append("ruling")
 
+    # Opt-in only: see boost_contrast for the failure it caused by default.
     if contrast:
         image = boost_contrast(image)
         steps.append("contrast")

@@ -75,6 +75,28 @@ augmentation cannot be quietly lost.
 can always show the user what a block was derived from, which is what makes an
 uncertain transcription reviewable instead of merely doubtful.
 
+## What preprocessing is measured to do
+
+Page detection went from 1 of 19 real photos to 19 of 19 when edge detection was
+replaced with brightness segmentation, and the corrected images are plainly
+better to look at. Neither of those is an accuracy claim.
+
+Compared on extraction output, preprocessing produced **no measurable quality
+improvement**: block and equation counts were identical or slightly worse than
+raw input. Its real benefit is that it makes a lower input resolution tolerable,
+which is worth about 30% of wall-clock time.
+
+One thing it did do was cause a regression. CLAHE contrast enhancement turned
+every handwritten mu on a statistics page into a capital M - twelve occurrences,
+silently, with full reported confidence. An ablation isolated it to that single
+step, and contrast is now opt-in.
+
+That failure is the argument for the next piece of work. Block counts and
+character totals cannot distinguish "read the page correctly" from "produced a
+similar volume of plausible text"; only a diff against reference transcriptions
+caught it. Until a labelled test set exists, changes to this pipeline cannot be
+evaluated, only admired.
+
 ## Confidence
 
 Blocks carry an optional confidence and a list of flags. Absent confidence means
