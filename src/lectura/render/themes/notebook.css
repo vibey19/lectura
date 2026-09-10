@@ -1,0 +1,41 @@
+/* shared structure; each theme sets its own variables and type */
+* { box-sizing: border-box; }
+body { margin: 0; padding: 2rem 1rem; background: var(--bg); color: var(--fg); }
+.note { max-width: var(--measure, 46rem); margin: 0 auto; }
+.note-title { font-size: 1.9rem; margin: 0 0 1.5rem; color: var(--accent); }
+.block { margin: 0 0 .9rem; }
+h2.block, h3.block, h4.block { margin: 1.8rem 0 .7rem; color: var(--accent); }
+ul.block, ol.block { padding-left: 1.4rem; }
+li { margin: .25rem 0; }
+.block-equation { margin: 1.2rem 0; overflow-x: auto; }
+.katex-failed { font-family: var(--mono); color: var(--flag); }
+.flag {
+  display: inline-block; width: 1.1em; height: 1.1em; line-height: 1.1em;
+  text-align: center; border-radius: 50%; background: var(--flag);
+  color: var(--bg); font-size: .72em; font-weight: 700; margin-right: .45em;
+  vertical-align: middle; cursor: help;
+}
+.uncertain { border-left: 3px solid var(--flag); padding-left: .7rem; }
+.supplement {
+  border-left: 3px solid var(--accent); padding-left: .7rem;
+  background: var(--supplement-bg); border-radius: 3px;
+}
+.review-banner {
+  font-size: .82rem; padding: .5rem .8rem; margin-bottom: 1.4rem;
+  border: 1px solid var(--flag); border-radius: 4px; color: var(--flag);
+}
+pre.block { overflow-x: auto; padding: .8rem; background: var(--supplement-bg); border-radius: 4px; }
+
+:root {
+  --bg:#fbf9f1; --fg:#22303f; --accent:#2f5d8c; --flag:#c2542a;
+  --supplement-bg:#eef3f8; --measure:42rem;
+  --mono:ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+body {
+  font-family: "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive, sans-serif;
+  line-height: 1.9;
+  background-image: repeating-linear-gradient(
+    transparent, transparent 1.85rem, #cfe0ef 1.85rem, #cfe0ef 1.9rem);
+}
+.note { background: transparent; }
+.note-title { border-bottom: 2px dashed var(--accent); padding-bottom: .4rem; }
