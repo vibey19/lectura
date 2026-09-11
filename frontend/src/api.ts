@@ -96,6 +96,10 @@ export interface DemoEntry {
   blocks: number;
   seconds: number;
   truncated: boolean;
+  /** Where the photograph came from. Public domain still deserves provenance. */
+  credit?: string;
+  licence?: string;
+  source?: string;
 }
 
 /** Pre-baked notes, served as static files so the demo works with no backend. */

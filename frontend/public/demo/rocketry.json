@@ -1,0 +1,119 @@
+{
+ "schema_version": "1.0",
+ "id": "14dea07d97ca",
+ "title": "EARTH",
+ "created_at": "2026-09-11T14:24:13.716566Z",
+ "source_images": [
+  "rocketry.jpg"
+ ],
+ "blocks": [
+  {
+   "id": "7ad54312eed7",
+   "type": "text",
+   "content": "limit of balloon, 20 miles",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  },
+  {
+   "id": "9e635de93285",
+   "type": "text",
+   "content": "limit of atmosphere; 200 miles",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  },
+  {
+   "id": "769584a91501",
+   "type": "text",
+   "content": "700 miles",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  },
+  {
+   "id": "730af976d315",
+   "type": "text",
+   "content": "1 lb",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  },
+  {
+   "id": "a965c6d945dc",
+   "type": "text",
+   "content": "50 lbs (Hx)",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  },
+  {
+   "id": "4ae74c2c3c66",
+   "type": "text",
+   "content": "6 miles/s",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  },
+  {
+   "id": "c4b731beb718",
+   "type": "text",
+   "content": "200,",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  },
+  {
+   "id": "77859c6e0d22",
+   "type": "text",
+   "content": "Moo",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  },
+  {
+   "id": "e32f47417895",
+   "type": "heading",
+   "content": "EARTH",
+   "items": [],
+   "level": 2,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "rocketry.jpg",
+   "flags": []
+  }
+ ]
+}

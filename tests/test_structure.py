@@ -101,3 +101,17 @@ def test_empty_extraction_is_not_silently_accepted():
     note = build_note(RawExtraction(items=[]))
     assert note.blocks == []
     assert note.title is None
+
+
+def test_notation_fragments_are_not_accepted_as_titles():
+    # One board produced "{- H2O" as its title: a piece of the page, not a name.
+    for fragment in ("{- H2O", r"\frac{a}{b}", "$x$", "||", "]"):
+        note = build_note(RawExtraction(items=[RawItem(text="body")],
+                                        title_hint=fragment))
+        assert note.title is None, fragment
+
+
+def test_a_real_title_survives():
+    note = build_note(RawExtraction(items=[RawItem(text="body")],
+                                    title_hint="# Reactor classification"))
+    assert note.title == "Reactor classification"

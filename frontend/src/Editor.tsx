@@ -470,8 +470,8 @@ function Examples({ entries, onOpen }: {
     <section className="examples">
       <h3>Or open a finished example</h3>
       <p className="examples-lede">
-        Real output from real pages — not cleaned up, so you can see where it is
-        unsure.
+        Real output from public-domain blackboard photographs — not cleaned up,
+        so you can see where it is unsure.
       </p>
       <div className="example-grid">
         {entries.map((entry) => (
@@ -480,6 +480,11 @@ function Examples({ entries, onOpen }: {
             <span className="example-title">{entry.title}</span>
             <span className="example-blurb">{entry.blurb}</span>
             <span className="example-meta mono">{entry.blocks} blocks</span>
+            {entry.credit && (
+              <span className="example-credit">
+                {entry.credit} · {entry.licence}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -520,25 +525,40 @@ function InsertHere({ onInsert }: { onInsert: () => void }) {
   );
 }
 
-const GREEK: Record<string, string> = {
-  alpha: "α", beta: "β", gamma: "γ", delta: "δ", epsilon: "ε", theta: "θ",
-  lambda: "λ", mu: "μ", pi: "π", rho: "ρ", sigma: "σ", tau: "τ", phi: "φ",
-  omega: "ω", Delta: "Δ", Sigma: "Σ", Omega: "Ω", partial: "∂", sum: "Σ",
-  int: "∫", sqrt: "√", infty: "∞", times: "×", cdot: "·", pm: "±",
-  leq: "≤", geq: "≥", neq: "≠", approx: "≈", rightarrow: "→", log: "log",
+const SYMBOLS: Record<string, string> = {
+  alpha: "α", beta: "β", gamma: "γ", delta: "δ", epsilon: "ε", zeta: "ζ",
+  eta: "η", theta: "θ", kappa: "κ", lambda: "λ", mu: "μ", nu: "ν", xi: "ξ",
+  pi: "π", rho: "ρ", sigma: "σ", tau: "τ", phi: "φ", chi: "χ", psi: "ψ",
+  omega: "ω", Delta: "Δ", Gamma: "Γ", Lambda: "Λ", Phi: "Φ", Pi: "Π",
+  Sigma: "Σ", Omega: "Ω", Theta: "Θ",
+  partial: "∂", nabla: "∇", sum: "Σ", prod: "Π", int: "∫", sqrt: "√",
+  infty: "∞", times: "×", cdot: "·", pm: "±", mp: "∓", div: "÷",
+  leq: "≤", geq: "≥", neq: "≠", approx: "≈", equiv: "≡", propto: "∝",
+  in: "∈", subset: "⊂", cup: "∪", cap: "∩", forall: "∀", exists: "∃",
+  rightarrow: "→", leftarrow: "←", leftrightarrow: "↔", Rightarrow: "⇒",
+  to: "→", mapsto: "↦", ell: "ℓ", hbar: "ℏ",
 };
+
+/** Commands that only affect layout. Their names are noise in a label. */
+const STRUCTURAL = new Set([
+  "frac", "left", "right", "big", "Big", "bigg", "Bigg", "begin", "end",
+  "text", "mathrm", "mathbf", "mathcal", "mathbb", "operatorname", "displaystyle",
+  "vec", "hat", "bar", "tilde", "dot", "overline", "underline", "quad", "qquad",
+]);
 
 /** A short, readable label for the outline.
  *
- *  Stripping LaTeX commands wholesale leaves orphaned subscript markers, so
- *  "\\mu_i = \\beta_0" became "_i = _0". Commands are mapped to their symbol
- *  where one exists and to their bare name otherwise. */
+ *  Stripping LaTeX wholesale leaves orphaned subscript markers - "\\mu_i" became
+ *  "_i" - while keeping command names turns "\\nabla\\Phi" into "nablaPhi".
+ *  Symbols are substituted, layout commands dropped, and braces removed.
+ */
 function preview(block: Block): string {
   const source = block.content || block.items[0] || "";
   return source
-    .replace(/\\([a-zA-Z]+)/g, (_, name: string) => GREEK[name] ?? name)
+    .replace(/\\([a-zA-Z]+)/g, (_, name: string) =>
+      SYMBOLS[name] ?? (STRUCTURAL.has(name) ? " " : name),
+    )
     .replace(/[{}$]/g, "")
-    .replace(/\^\s*/g, "^")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 44);

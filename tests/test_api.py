@@ -121,3 +121,19 @@ def test_rate_limit_can_be_disabled():
     import lectura.api.server as app_module
 
     assert app_module.RATE_LIMIT_PER_HOUR > 0   # sane default for a public demo
+
+
+@pytest.mark.skipif(not STATIC_DIR.exists(), reason="frontend not built")
+def test_static_files_are_served_rather_than_the_shell():
+    # The demo notes, favicon and robots.txt live under the static root and were
+    # being answered with HTML until the fallback checked for real files first.
+    response = client.get("/demo/index.json")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+
+
+@pytest.mark.skipif(not STATIC_DIR.exists(), reason="frontend not built")
+def test_path_traversal_cannot_escape_the_static_root():
+    for attempt in ("../pyproject.toml", "../../README.md", "..%2fpyproject.toml"):
+        body = client.get(f"/{attempt}").text
+        assert "[project]" not in body

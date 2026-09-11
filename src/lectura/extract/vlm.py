@@ -150,6 +150,7 @@ _LINE_OBJECT = re.compile(
     r'(?:\s*,\s*"certain"\s*:\s*(?P<certain>true|false))?\s*\}',
     re.DOTALL,
 )
+_MAX_REPEATS = 2
 _TITLE = re.compile(r'"title"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
 
@@ -178,14 +179,29 @@ def _parse(response: str) -> tuple[dict, bool]:
 
 
 def _salvage(response: str) -> dict:
-    """Recover the complete line objects from a truncated response."""
-    lines = [
-        {
+    """Recover the complete line objects from a truncated response.
+
+    Consecutive identical lines are collapsed. A response is usually truncated
+    because the model looped, and a loop emits *complete* objects - one page
+    salvaged into 128 blocks, 120 of them the same expression repeated. Real
+    notes do repeat a line occasionally, so a short run is kept and only the
+    degenerate tail is dropped.
+    """
+    lines: list[dict] = []
+    repeats = 0
+    for match in _LINE_OBJECT.finditer(response):
+        line = {
             "text": json.loads(f'"{match.group("text")}"'),
             "kind": match.group("kind"),
             "certain": match.group("certain") != "false",
         }
-        for match in _LINE_OBJECT.finditer(response)
-    ]
+        if lines and line["text"] == lines[-1]["text"]:
+            repeats += 1
+            if repeats >= _MAX_REPEATS:
+                continue
+        else:
+            repeats = 0
+        lines.append(line)
+
     title = _TITLE.search(response)
     return {"title": title.group(1) if title else None, "lines": lines}

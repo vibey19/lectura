@@ -1,26 +1,35 @@
 [
  {
-  "slug": "link-functions",
-  "title": "PROBLEM - 3",
-  "blurb": "Generalised linear models: solving three link functions for the mean.",
-  "blocks": 13,
-  "seconds": 77.4,
-  "truncated": false
+  "slug": "gravitation",
+  "title": "Gravitational field equations",
+  "blurb": "A physics blackboard: field equations and an energy functional.",
+  "blocks": 6,
+  "seconds": 16.7,
+  "truncated": false,
+  "credit": "Bekenstein100.JPG",
+  "licence": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Bekenstein100.JPG"
  },
  {
-  "slug": "perceptron",
-  "title": "MULTI-LAYER PERCEPTRON",
-  "blurb": "Intro notes on perceptrons, activation and the learning rule.",
-  "blocks": 10,
-  "seconds": 247.3,
-  "truncated": true
+  "slug": "rocketry",
+  "title": "Rocket altitude notes",
+  "blurb": "Goddard at Clark University, 1924 \u2014 atmosphere limits and escape figures.",
+  "blocks": 9,
+  "seconds": 13.6,
+  "truncated": false,
+  "credit": "Dr. Robert Goddard at Clark University (NASA GPN-2002-000130)",
+  "licence": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Dr._Robert_Goddard_at_Clark_University_-_GPN-2002-000130.jpg"
  },
  {
-  "slug": "backprop",
-  "title": "TASK-2",
-  "blurb": "Chain-rule derivatives through a small network, then vector distance.",
-  "blocks": 17,
-  "seconds": 88.3,
-  "truncated": false
+  "slug": "reactors",
+  "title": "Reactor classification",
+  "blurb": "A lecture board in French: homogeneous and heterogeneous reactors, and moderators.",
+  "blocks": 6,
+  "seconds": 54.5,
+  "truncated": false,
+  "credit": "Andre Gautier, French Atomic Researcher (Commons)",
+  "licence": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Andre_Gautier,_French_Atomic_Researcher,_Back_from_US_-_NARA_-_541688.jpg"
  }
 ]

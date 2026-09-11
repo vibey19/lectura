@@ -1,0 +1,83 @@
+{
+ "schema_version": "1.0",
+ "id": "66969126f4b6",
+ "title": "Gravitational field equations",
+ "created_at": "2026-09-11T14:23:59.993943Z",
+ "source_images": [
+  "gravitation.jpg"
+ ],
+ "blocks": [
+  {
+   "id": "995df9b6398d",
+   "type": "equation",
+   "content": "\\mu(\\vec{a}/a_0)\\vec{a} = -\\nabla\\Phi_N",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "gravitation.jpg",
+   "flags": []
+  },
+  {
+   "id": "2f31b45c5ef8",
+   "type": "equation",
+   "content": "L = \\int\\left(\\frac{L}{8\\pi G}F(|\\nabla\\vec{A}|^2/a_0^2)\\,d^3x + \\rho\\Phi\\right)d^3x",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "gravitation.jpg",
+   "flags": []
+  },
+  {
+   "id": "de8e9bd439d9",
+   "type": "equation",
+   "content": "\\nabla\\cdot(F'\\nabla\\Phi) = 4\\pi G\\rho",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "gravitation.jpg",
+   "flags": []
+  },
+  {
+   "id": "9c2d8523cac5",
+   "type": "equation",
+   "content": "F' \\leftrightarrow M",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "gravitation.jpg",
+   "flags": []
+  },
+  {
+   "id": "8e094855a031",
+   "type": "equation",
+   "content": "\\nabla\\cdot(\\nabla\\phi(x)\\cdot F(\\nabla\\phi(x))",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "gravitation.jpg",
+   "flags": []
+  },
+  {
+   "id": "aafea3a2d3ee",
+   "type": "equation",
+   "content": "\\int\\frac{\\nabla\\phi(x)\\cdot\\nabla\\phi(x')}{|x-x'|^3}",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "gravitation.jpg",
+   "flags": []
+  }
+ ]
+}

@@ -198,11 +198,21 @@ if STATIC_DIR.exists():
 
     @app.get("/{path:path}")
     def spa(path: str) -> FileResponse:
-        """Serve the app shell for client-side routes such as /app.
+        """Serve a static file if one exists, else the app shell.
 
-        Without this a refresh on any route but / returns 404, because the
-        router lives in the browser and the server knows only one document.
+        The shell fallback is what lets a refresh on /app work, since the router
+        lives in the browser and the server knows only one document. But it must
+        not swallow real files: the demo notes, favicon, social card and
+        robots.txt all live under the static root and were being answered with
+        HTML until this checked for them first.
         """
         if path.startswith("api/"):
             raise HTTPException(404, "not found")
+
+        candidate = (STATIC_DIR / path).resolve()
+        if (
+            candidate.is_file()
+            and candidate.is_relative_to(STATIC_DIR.resolve())  # no path escape
+        ):
+            return FileResponse(candidate)
         return FileResponse(STATIC_DIR / "index.html")

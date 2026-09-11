@@ -407,5 +407,9 @@
 .example-title { padding: 0 var(--s-3); font-weight: 600; font-size: var(--t-sm); }
 .example-blurb { padding: 0 var(--s-3); font-size: var(--t-xs); color: var(--ink-2); line-height: 1.5; }
 .example-meta { padding: var(--s-1) var(--s-3) 0; color: var(--ink-3); }
+.example-credit {
+  padding: 2px var(--s-3) 0; font-size: 10px; line-height: 1.4;
+  color: var(--ink-3); opacity: .85;
+}
 
 .skeleton-note { display: flex; align-items: center; justify-content: center; gap: var(--s-3); flex-wrap: wrap; }

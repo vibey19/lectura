@@ -58,3 +58,26 @@ def test_unusable_output_yields_nothing_to_build_on():
     parsed, salvaged = _parse("total gibberish, no json here")
     assert salvaged is True
     assert parsed["lines"] == []
+
+
+def test_salvage_collapses_a_repetition_loop():
+    # A truncated response is usually truncated *because* the model looped, and
+    # a loop emits complete objects: one real page salvaged into 128 blocks,
+    # 120 of them the same expression.
+    line = '{"text": "x = 1", "kind": "math", "certain": true},'
+    raw = '{"title": "T", "lines": [' + line * 60 + '{"text": "unterminated'
+    parsed, salvaged = _parse(raw)
+    assert salvaged is True
+    assert len(parsed["lines"]) <= 3
+    assert parsed["lines"][0]["text"] == "x = 1"
+
+
+def test_salvage_keeps_a_genuine_short_repeat():
+    raw = (
+        '{"lines": ['
+        '{"text": "= 0", "kind": "math", "certain": true},'
+        '{"text": "= 0", "kind": "math", "certain": true},'
+        '{"text": "done", "kind": "body", "certain": true},'
+    )
+    parsed, _ = _parse(raw)
+    assert [line["text"] for line in parsed["lines"]] == ["= 0", "= 0", "done"]

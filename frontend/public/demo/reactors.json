@@ -1,0 +1,88 @@
+{
+ "schema_version": "1.0",
+ "id": "77367489c36f",
+ "title": "Reactor classification",
+ "created_at": "2026-09-11T14:25:08.387274Z",
+ "source_images": [
+  "reactors.jpg"
+ ],
+ "blocks": [
+  {
+   "id": "b1b31e6dbb96",
+   "type": "text",
+   "content": "Argonne (Ill)",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "reactors.jpg",
+   "flags": []
+  },
+  {
+   "id": "6e3780842006",
+   "type": "text",
+   "content": "A Reacteurs homog\u00e8nes",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "reactors.jpg",
+   "flags": []
+  },
+  {
+   "id": "8032214503bb",
+   "type": "text",
+   "content": "by Reacteurs h\u00e9t\u00e9rog\u00e8nes",
+   "items": [],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "reactors.jpg",
+   "flags": []
+  },
+  {
+   "id": "32fe448234eb",
+   "type": "bullet_list",
+   "content": "",
+   "items": [
+    "Moderateur"
+   ],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "reactors.jpg",
+   "flags": []
+  },
+  {
+   "id": "eeed15021cbb",
+   "type": "heading",
+   "content": "{- H2O",
+   "items": [],
+   "level": 2,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "reactors.jpg",
+   "flags": []
+  },
+  {
+   "id": "8219ad6895be",
+   "type": "bullet_list",
+   "content": "",
+   "items": [
+    "D2O",
+    "C"
+   ],
+   "level": null,
+   "origin": "extracted",
+   "confidence": 0.9,
+   "bbox": null,
+   "source_image": "reactors.jpg",
+   "flags": []
+  }
+ ]
+}

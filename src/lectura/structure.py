@@ -135,16 +135,34 @@ def build_note(
 
     flush()
 
-    title = raw.title_hint.strip().lstrip("#").strip() if raw.title_hint else None
+    title = _clean_title(raw.title_hint)
     if not title:
         first_heading = next((b for b in blocks if b.type is BlockType.HEADING), None)
-        title = first_heading.content if first_heading else None
+        title = _clean_title(first_heading.content) if first_heading else None
 
     return Note(
         title=title,
         blocks=blocks,
         source_images=[source_image] if source_image else [],
     )
+
+
+def _clean_title(candidate: str | None) -> str | None:
+    """Reject titles that are really fragments of notation.
+
+    The model's title guess is sometimes a piece of the page rather than a name
+    for it - one board produced "{- H2O". A title needs a couple of words of
+    actual prose to be worth showing.
+    """
+    if not candidate:
+        return None
+    title = candidate.strip().lstrip("#").strip()
+    if not title or title[0] in "{}\\$[]|":
+        return None
+    letters = sum(character.isalpha() for character in title)
+    if letters < 3 or letters < len(title) / 3:
+        return None
+    return title
 
 
 def _item_text(item: RawItem, block_type: BlockType) -> str:
