@@ -96,6 +96,38 @@ the wrong thing.
 
 Positional exact-match is kept as a strict secondary signal.
 
+## Backend comparison
+
+Four labelled pages, raw input at 2200px, identical metric:
+
+| Backend | CER | formula error | exact | time |
+|---|---|---|---|---|
+| Tesseract | 1.069 | 0.992 | 0/28 | 4s |
+| Pix2Text | 0.804 | 0.541 | 1/28 | 15s |
+| Qwen2.5-VL 7B | **0.224** | **0.160** | **7/28** | 613s |
+
+Tesseract's formula error is 0.992 - nothing recoverable, scoring exactly 1.000
+on three of four pages. Its CER of 1.903 on the derivatives page is worse than
+emitting nothing at all, because it invents more wrong characters than the page
+contains.
+
+Pix2Text splits exactly along the line this project was founded on. Its formula
+error is roughly half Tesseract's, so the formula recogniser does work on
+handwriting, while its text CER barely improves: it recovered the square-root
+and fraction structure of an expression while reading the heading above it as
+"P R O B / E M-3". It is a formula specialist, not a whole-page baseline for
+this material.
+
+The VLM wins on both axes by a wide margin and loses on latency by roughly 40x.
+That gap is a design input rather than a defect: a router that sends clean
+printed material to the fast staged pipeline and handwriting to the VLM is the
+obvious way to keep a free-tier demo responsive.
+
+Per-page numbers matter more than the averages. The VLM scores 0.022 formula
+error on dense symbolic algebra and 0.395 on a page of numeric substitution -
+the hard case is arithmetic with small digits, not mathematics with large
+notation, which is the opposite of what one would guess.
+
 ## What preprocessing is measured to do
 
 Page detection went from 1 of 19 real photos to 19 of 19 when edge detection was
