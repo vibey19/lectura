@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from lectura.api import app
+from lectura.api.server import STATIC_DIR
 from lectura.extract import Tesseract
 from lectura.schema import Block, BlockType, Note
 
@@ -72,6 +73,10 @@ def test_render_rejects_unknown_theme():
     assert response.status_code == 400
 
 
+@pytest.mark.skipif(
+    not STATIC_DIR.exists(),
+    reason="frontend not built; run `npm run build` in frontend/",
+)
 def test_client_side_routes_serve_the_app_shell():
     # A refresh on /app must not 404: the router lives in the browser.
     response = client.get("/app")
