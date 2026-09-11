@@ -7,8 +7,8 @@ allowed to invent its own shape.
 Two invariants matter more than anything else here:
 
 1. ``Block.origin`` records where content came from. Extracted content is what
-   the source image actually showed; supplements are AI additions the user
-   opted into. They are never silently merged.
+   the source image actually showed; supplements are generated additions the
+   user opted into. They are never silently merged.
 2. ``Block.bbox`` points back into the source image so the UI can always show
    the user what a block was derived from.
 """
@@ -28,7 +28,7 @@ class Origin(StrEnum):
     """Where a block's content came from. See invariant 1 above."""
 
     EXTRACTED = "extracted"   # read off the source image
-    SUPPLEMENT = "supplement"  # AI-generated, user-accepted
+    SUPPLEMENT = "supplement"  # model-generated, user-accepted
     USER = "user"             # typed or edited by the user
 
 

@@ -67,9 +67,9 @@ nothing downstream invents its own shape.
 Two invariants:
 
 **Origin is tracked per block.** `extracted` came off the page, `supplement` is an
-AI addition the user accepted, `user` is hand-authored. Because it lives in the
-data rather than in a convention, the separation between source material and AI
-augmentation cannot be quietly lost.
+generated addition the user accepted, `user` is hand-authored. Because it lives
+in the data rather than in a convention, the separation between source material
+and generated augmentation cannot be quietly lost.
 
 **Blocks point back at the image.** A normalised bounding box means the interface
 can always show the user what a block was derived from, which is what makes an

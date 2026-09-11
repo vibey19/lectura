@@ -74,7 +74,7 @@ export default function Landing() {
             <IconLayers size={22} />
             <h3>Your notes stay yours</h3>
             <p>
-              What was read off the page and what the AI added are stored
+              What was read off the page and what the model added are stored
               separately and shown differently. Nothing is silently rewritten.
             </p>
           </article>
@@ -147,7 +147,7 @@ export default function Landing() {
 
       <footer className="foot">
         <LogoMark />
-        <span>Lectura — runs on open weights, no paid AI API.</span>
+        <span>Lectura — runs on open weights, no paid inference API.</span>
       </footer>
     </div>
   );

@@ -5,7 +5,11 @@ import {
   IconClose, IconDownload, IconImage, IconLayers, IconPlus,
   IconRedo, IconUndo, IconUpload, IconWarn,
 } from "./Icons";
-import { extract } from "./api";
+import {
+  ApiError, HAS_BACKEND, demoIndex, demoNote, extract, health,
+  type DemoEntry,
+} from "./api";
+import { downscale } from "./downscale";
 import { isUncertain, type Block, type BlockType, type Note, type Theme, THEMES } from "./types";
 
 const STORAGE_KEY = "lectura.note.v1";
@@ -26,7 +30,11 @@ export default function Editor() {
   const [showSource, setShowSource] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [examples, setExamples] = useState<DemoEntry[]>([]);
+  const [backendUp, setBackendUp] = useState<boolean | null>(HAS_BACKEND ? null : false);
+  const [elapsed, setElapsed] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
+  const inflight = useRef<AbortController | null>(null);
 
   /* ----------------------------------------------------------- persistence */
 
@@ -47,6 +55,20 @@ export default function Editor() {
       /* private browsing, quota, blocked storage: not worth interrupting for */
     }
   }, [note]);
+
+  useEffect(() => {
+    void demoIndex().then(setExamples);
+    if (HAS_BACKEND) void health().then((h) => setBackendUp(h !== null));
+  }, []);
+
+  // Elapsed seconds during extraction: a request that can run for minutes needs
+  // to look alive, not hung.
+  useEffect(() => {
+    if (status.kind !== "busy") return;
+    setElapsed(0);
+    const timer = setInterval(() => setElapsed((n) => n + 1), 1000);
+    return () => clearInterval(timer);
+  }, [status.kind]);
 
   /* --------------------------------------------------------------- history */
 
@@ -101,10 +123,29 @@ export default function Editor() {
 
   /* ---------------------------------------------------------------- upload */
 
-  const upload = useCallback(async (file: File) => {
+  const openExample = useCallback(async (slug: string) => {
+    try {
+      const { note: loaded, preview } = await demoNote(slug);
+      setPast([]); setFuture([]);
+      setNoteRaw(loaded);
+      setSourceUrl(preview);
+      setTruncated(false);
+      setMeta("example");
+      setShowSource(true);
+      setStatus({ kind: "idle" });
+    } catch (error) {
+      setStatus({ kind: "error", message: (error as Error).message });
+    }
+  }, []);
+
+  const upload = useCallback(async (raw_file: File) => {
+    inflight.current?.abort();
+    const controller = new AbortController();
+    inflight.current = controller;
     setStatus({ kind: "busy" });
     try {
-      const result = await extract(file);
+      const file = await downscale(raw_file);
+      const result = await extract(file, { signal: controller.signal });
       setPast([]);
       setFuture([]);
       setNoteRaw(result.note);
@@ -116,9 +157,18 @@ export default function Editor() {
       setStatus({ kind: "idle" });
       setShowSource(true);
     } catch (error) {
-      setStatus({ kind: "error", message: (error as Error).message });
+      if (controller.signal.aborted) { setStatus({ kind: "idle" }); return; }
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "The server could not be reached. It may be asleep — try an example below.";
+      setStatus({ kind: "error", message });
+    } finally {
+      if (inflight.current === controller) inflight.current = null;
     }
   }, []);
+
+  const cancel = useCallback(() => inflight.current?.abort(), []);
 
   /* ----------------------------------------------------------- block edits */
 
@@ -274,15 +324,21 @@ export default function Editor() {
 
         <main className="canvas">
           {!note && status.kind === "idle" && (
-            <Dropzone
-              dragging={dragging}
-              setDragging={setDragging}
-              onFile={upload}
-              onBrowse={() => fileInput.current?.click()}
-            />
+            <>
+              <Dropzone
+                dragging={dragging}
+                setDragging={setDragging}
+                onFile={upload}
+                onBrowse={() => fileInput.current?.click()}
+                backendUp={backendUp}
+              />
+              {examples.length > 0 && (
+                <Examples entries={examples} onOpen={openExample} />
+              )}
+            </>
           )}
 
-          {status.kind === "busy" && <Skeleton />}
+          {status.kind === "busy" && <Skeleton elapsed={elapsed} onCancel={cancel} />}
 
           {status.kind === "error" && (
             <div className="notice notice-error" role="alert">
@@ -369,12 +425,14 @@ export default function Editor() {
 
 /* ----------------------------------------------------------------- pieces */
 
-function Dropzone({ dragging, setDragging, onFile, onBrowse }: {
+function Dropzone({ dragging, setDragging, onFile, onBrowse, backendUp }: {
   dragging: boolean;
   setDragging: (v: boolean) => void;
   onFile: (file: File) => void;
   onBrowse: () => void;
+  backendUp: boolean | null;
 }) {
+  const offline = backendUp === false;
   return (
     <div
       className={`dropzone ${dragging ? "over" : ""}`}
@@ -395,13 +453,43 @@ function Dropzone({ dragging, setDragging, onFile, onBrowse }: {
       <h2>Drop a photo of lecture material</h2>
       <p>Handwritten notes, a blackboard, or a slide — HEIC, JPEG or PNG.</p>
       <span className="btn btn-primary">Choose a photo</span>
+      {offline && (
+        <p className="dropzone-offline">
+          Live reading is offline right now — the examples below work without it.
+        </p>
+      )}
     </div>
+  );
+}
+
+function Examples({ entries, onOpen }: {
+  entries: DemoEntry[];
+  onOpen: (slug: string) => void;
+}) {
+  return (
+    <section className="examples">
+      <h3>Or open a finished example</h3>
+      <p className="examples-lede">
+        Real output from real pages — not cleaned up, so you can see where it is
+        unsure.
+      </p>
+      <div className="example-grid">
+        {entries.map((entry) => (
+          <button key={entry.slug} className="example" onClick={() => onOpen(entry.slug)}>
+            <img src={`/demo/${entry.slug}.jpg`} alt="" loading="lazy" />
+            <span className="example-title">{entry.title}</span>
+            <span className="example-blurb">{entry.blurb}</span>
+            <span className="example-meta mono">{entry.blocks} blocks</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
 /** Skeleton rather than a spinner: it reserves the space the note will occupy,
  *  so nothing jumps when the result lands. */
-function Skeleton() {
+function Skeleton({ elapsed, onCancel }: { elapsed: number; onCancel: () => void }) {
   return (
     <div className="paper skeleton" aria-busy="true" aria-live="polite">
       <p className="sr-only">Reading the page</p>
@@ -414,7 +502,9 @@ function Skeleton() {
       <div className="sk sk-eq" />
       <div className="sk sk-line" style={{ width: "70%" }} />
       <p className="skeleton-note">
-        Reading the page — a full-resolution photo takes about a minute.
+        Reading the page — {elapsed}s elapsed. A full-resolution photo usually
+        takes about a minute.
+        <button className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
       </p>
     </div>
   );

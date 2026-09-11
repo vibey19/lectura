@@ -5,7 +5,7 @@ into structured, editable study notes with correctly rendered mathematics.
 
 Lectura is not an OCR wrapper. It keeps a canonical structured representation of
 what a page contained, tracks how confident it is about each piece, and keeps
-what was *read from the page* strictly separate from anything AI *added*.
+what was *read from the page* strictly separate from anything the model *added*.
 
 ## Status
 
@@ -35,8 +35,8 @@ design (see ARCHITECTURE.md).
 - **One canonical note model.** Themes, exports and the editor are views over
   the same structure. Switching theme never re-runs a model.
 - **Extraction, verification and augmentation are separate.** Every block records
-  its `origin`. AI additions are opt-in and visually distinct — the source
-  material is never silently rewritten.
+  its `origin`. Generated additions are opt-in and visually distinct — the
+  source material is never silently rewritten.
 - **Uncertainty is part of the product.** Blocks carry confidence and warning
   flags, and the interface surfaces doubtful blocks for review rather than
   presenting everything as equally trustworthy.

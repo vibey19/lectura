@@ -1,5 +1,5 @@
-"""The schema carries the guarantee that AI additions never masquerade as
-source material. These tests hold that line."""
+"""The schema carries the guarantee that generated additions never masquerade
+as source material. These tests hold that line."""
 
 import json
 

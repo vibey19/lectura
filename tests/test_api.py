@@ -92,3 +92,27 @@ def test_extract_returns_a_displayable_preview():
     preview = response.json()["preview"]
     assert preview.startswith("data:image/jpeg;base64,")
     assert len(preview) > 100
+
+
+def test_rate_limit_rejects_once_the_hourly_ceiling_is_reached(monkeypatch):
+    # One extraction occupies a CPU for minutes; a public demo needs a ceiling.
+    import lectura.api.server as app_module
+
+    monkeypatch.setattr(app_module, "RATE_LIMIT_PER_HOUR", 2)
+    app_module._requests.clear()
+
+    statuses = [
+        client.post(
+            "/api/extract?backend=tesseract",
+            files={"file": ("a.png", _png(), "image/png")},
+        ).status_code
+        for _ in range(3)
+    ]
+    assert statuses[-1] == 429
+    app_module._requests.clear()
+
+
+def test_rate_limit_can_be_disabled():
+    import lectura.api.server as app_module
+
+    assert app_module.RATE_LIMIT_PER_HOUR > 0   # sane default for a public demo
