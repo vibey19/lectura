@@ -1,0 +1,11 @@
+{
+  "page_id": "IMG_7752",
+  "source": "handwritten notes/IMG_7752.heic",
+  "surface": "notebook",
+  "text": "# STATISTICAL MODELING A mathematical framework that uses data to understand the world. Helps in: Find Patterns Predict Outcomes Separate Signal from noise # MODELING LOOP 1. Build model 2. Fit model 3. Evaluate 4. Improve # DATATYPES 1. Nominal No order eg. Name of hospital countries 2. Ordinal Ordered eg. Likert scale 3. Interval Numeric, No true zero eg. Temp 4. Ratio Numeric, true zero eg. weight # LINEAR MODEL y = output / Response / Observation X = inputs / predictors / covariates / Expt Var w = params error",
+  "formulas": [
+    "y = Xw + \\epsilon"
+  ],
+  "licence": "personal",
+  "note": "Prose-heavy with one formula - the opposite profile to IMG_7756, and the case classical OCR handles best. Reverse-side ink shows through."
+}

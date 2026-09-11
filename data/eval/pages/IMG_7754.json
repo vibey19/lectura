@@ -1,0 +1,18 @@
+{
+  "page_id": "IMG_7754",
+  "source": "handwritten notes/IMG_7754.heic",
+  "surface": "notebook",
+  "text": "By multiplying everything TASK-2 Given: a) Euclidean distance and cosine similarity 1) Euclidean distance formula",
+  "formulas": [
+    "\\frac{\\partial(\\sigma(x))}{\\partial x} = \\sigma(x)(1-\\sigma(x))",
+    "\\frac{\\partial h}{\\partial z_1} = 0.5(1-0.5) = 0.5 \\times 0.5 = 0.25",
+    "\\frac{\\partial z_1}{\\partial w_1} = \\frac{\\partial}{\\partial w_1}(w_1 \\cdot x + b_1) = x = 1",
+    "\\frac{\\partial E}{\\partial w_1} = 1 \\times 4 \\times 0.25 \\times 1 = 1",
+    "Q = \\begin{bmatrix} 2 \\\\ 1 \\\\ 6 \\\\ 4 \\\\ 2 \\end{bmatrix}",
+    "A = \\begin{bmatrix} 1 \\\\ 2 \\\\ 3 \\\\ 4 \\\\ 1 \\end{bmatrix}",
+    "B = \\begin{bmatrix} 3 \\\\ 1 \\\\ 4 \\\\ 1 \\\\ 5 \\end{bmatrix}",
+    "d(Q,W) = \\sqrt{\\sum_i (Q_i - X_i)^2}"
+  ],
+  "licence": "personal",
+  "note": "Backprop derivatives then column vectors. Tests partial-derivative notation and bmatrix. Reverse-side ink shows through."
+}
