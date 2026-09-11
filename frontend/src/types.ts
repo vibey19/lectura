@@ -48,6 +48,8 @@ export interface ExtractResponse {
   seconds: number;
   backend: string;
   preprocess: string;
+  /** The model was cut off mid-answer; the note is partial. */
+  truncated: boolean;
   /** Data URL of the corrected image the model read. The upload itself is
    *  often HEIC, which browsers cannot display. */
   preview: string;

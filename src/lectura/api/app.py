@@ -21,7 +21,7 @@ from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
 
 from lectura import ingest
-from lectura.extract import OllamaVLM, Pix2TextOCR, Tesseract
+from lectura.extract import ExtractionError, OllamaVLM, Pix2TextOCR, Tesseract
 from lectura.preprocess import preprocess
 from lectura.render import available_themes, render
 from lectura.schema import Note
@@ -50,7 +50,10 @@ class ExtractResponse(BaseModel):
     seconds: float
     backend: str
     preprocess: str
-    preview: str
+    truncated: bool = False
+    """The model was cut off mid-answer and this note is partial."""
+
+    preview: str = ""
     """Data URL of the image the model actually read.
 
     Returned rather than letting the browser display the upload directly:
@@ -98,6 +101,9 @@ async def extract(
 
     try:
         raw = BACKENDS[backend]().extract(image)
+    except ExtractionError as exc:
+        # A readable reason, not a blank page: the user waited minutes for this.
+        raise HTTPException(422, str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
 
@@ -107,6 +113,7 @@ async def extract(
         seconds=raw.seconds,
         backend=raw.backend,
         preprocess=steps,
+        truncated=raw.truncated,
         preview=_preview_data_url(image),
     )
 

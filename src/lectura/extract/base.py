@@ -15,6 +15,15 @@ from PIL import Image
 from lectura.schema import BBox
 
 
+class ExtractionError(RuntimeError):
+    """Extraction produced nothing usable.
+
+    Raised rather than returning an empty result: a blank page presented as a
+    successful read is the worst outcome, because the user waits minutes and is
+    given no reason and nothing to act on.
+    """
+
+
 @dataclass
 class RawItem:
     """One transcribed chunk, before document structure is inferred."""
@@ -31,6 +40,7 @@ class RawExtraction:
     title_hint: str | None = None
     backend: str = "unknown"
     seconds: float = 0.0
+    truncated: bool = False   # the model hit its output limit mid-answer
 
 
 class Extractor(Protocol):

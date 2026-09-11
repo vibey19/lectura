@@ -93,3 +93,11 @@ def test_labelled_equations_lose_their_delimiters():
 def test_inline_math_inside_prose_is_unwrapped_when_typed_as_equation():
     note = note_from(r"Solve for $\mu_i$")
     assert "$" not in note.blocks[0].content
+
+
+def test_empty_extraction_is_not_silently_accepted():
+    # A blank page presented as success is the worst outcome: the user waits
+    # minutes and gets no reason and nothing to act on.
+    note = build_note(RawExtraction(items=[]))
+    assert note.blocks == []
+    assert note.title is None

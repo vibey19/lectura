@@ -20,6 +20,7 @@ export default function Editor() {
   const [theme, setTheme] = useState<Theme>("academic");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [meta, setMeta] = useState("");
+  const [truncated, setTruncated] = useState(false);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
   const [showOutline, setShowOutline] = useState(true);
   const [showSource, setShowSource] = useState(false);
@@ -110,6 +111,7 @@ export default function Editor() {
       // The server returns the corrected image it read, which the browser can
       // always display; the raw upload is frequently HEIC and cannot be shown.
       setSourceUrl(result.preview);
+      setTruncated(result.truncated);
       setMeta(`${result.backend} · ${result.seconds}s`);
       setStatus({ kind: "idle" });
       setShowSource(true);
@@ -296,6 +298,18 @@ export default function Editor() {
 
           {note && status.kind !== "busy" && (
             <>
+              {truncated && (
+                <div className="notice notice-warn" role="status">
+                  <IconWarn size={18} />
+                  <div>
+                    <strong>This page was cut short.</strong>
+                    <p>
+                      The model ran out of room before finishing, so the end of
+                      the page is missing. What it did read is below.
+                    </p>
+                  </div>
+                </div>
+              )}
               {uncertain.length > 0 && (
                 <div className="notice notice-warn">
                   <IconWarn size={18} />

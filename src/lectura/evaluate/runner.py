@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import statistics
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from lectura import ingest
@@ -16,7 +16,7 @@ from lectura.evaluate.metrics import (
     latex_stream_distance,
     word_error_rate,
 )
-from lectura.extract.base import Extractor
+from lectura.extract.base import ExtractionError, Extractor
 from lectura.preprocess import preprocess
 from lectura.schema import BlockType, Note
 from lectura.structure import build_note
@@ -27,6 +27,12 @@ class Report:
     backend: str
     scores: list[PageScore]
     seconds: float
+    failures: list[str] = field(default_factory=list)
+    """Pages the extractor could not read at all.
+
+    Scored as total failures rather than skipped: a backend that returns nothing
+    on a page has not earned a better average by omitting it.
+    """
 
     def mean(self, attribute: str) -> float:
         values = [getattr(s, attribute) for s in self.scores]
@@ -35,12 +41,13 @@ class Report:
     def summary(self) -> str:
         formulas = sum(s.formula_count for s in self.scores)
         exact = sum(s.formula_exact for s in self.scores)
+        failed = f" failed={len(self.failures)}" if self.failures else ""
         return (
             f"{self.backend}: pages={len(self.scores)} "
             f"CER={self.mean('cer'):.3f} WER={self.mean('wer'):.3f} "
             f"formula_exact={exact}/{formulas} "
             f"formula_stream={self.mean('formula_stream_distance'):.3f} "
-            f"{self.seconds:.0f}s"
+            f"{self.seconds:.0f}s{failed}"
         )
 
 
@@ -96,6 +103,7 @@ def evaluate(
 ) -> Report:
     references = references if references is not None else load_all(root)
     scores: list[PageScore] = []
+    failures: list[str] = []
     total = 0.0
 
     for reference in references:
@@ -107,8 +115,27 @@ def evaluate(
             image = preprocess(image).image
         image = ingest.fit_within(image, max_edge)
 
-        raw = extractor.extract(image)
+        try:
+            raw = extractor.extract(image)
+        except ExtractionError:
+            # Reading nothing is a result, not a reason to abandon the run.
+            failures.append(reference.page_id)
+            scores.append(
+                PageScore(
+                    page_id=reference.page_id,
+                    cer=1.0,
+                    wer=1.0,
+                    formula_count=len(reference.formulas),
+                    formula_exact=0,
+                    formula_edit_distance=1.0,
+                    formula_stream_distance=1.0,
+                )
+            )
+            continue
+
         total += raw.seconds
         scores.append(score_page(reference, build_note(raw, source_image=path.name)))
 
-    return Report(backend=extractor.name, scores=scores, seconds=total)
+    return Report(
+        backend=extractor.name, scores=scores, seconds=total, failures=failures
+    )

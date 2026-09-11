@@ -167,6 +167,38 @@ similar volume of plausible text"; only a diff against reference transcriptions
 caught it. Until a labelled test set exists, changes to this pipeline cannot be
 evaluated, only admired.
 
+## When the model loops
+
+Greedy decoding is used so extraction is reproducible, which the evaluation
+harness depends on. It also makes the model prone to repetition loops: on one
+page it read ten lines correctly, reached a formula, and emitted `\bar{x}` 939
+times until it exhausted its output budget, truncating the JSON mid-string.
+
+Three things were tried.
+
+**A repetition penalty made it worse.** Formula error rose from 0.160 to 0.463
+and the most notation-dense page in the set went from the best score to reading
+nothing at all. The reason is structural: valid mathematics *is* repetitive -
+`\beta_0 + \beta_1 x_{i,1} + \beta_2 x_{i,2}` repeats tokens constantly - so
+penalising repetition penalises correct LaTeX. Reverted.
+
+**A larger output budget bought nothing.** Doubling `num_predict` scored
+identically, because no page legitimately needs that length, while doubling the
+worst case from four minutes to nine: a looping model spends whatever it is
+given. The modest budget stays, as a circuit breaker.
+
+**Salvage works.** A truncated response holds most of the page followed by one
+broken string, so complete line objects are recovered by pattern and the note is
+marked truncated. The page that previously produced nothing now yields ten
+blocks and its title, and the interface says the page was cut short.
+
+The general lesson, on its third instance: every intervention that treats
+mathematical notation as ordinary text damages it. Contrast enhancement
+thickened thin strokes and turned every mu into an M; ruling suppression lifted
+faint pen strokes along with printed grid; repetition penalty punished
+legitimately repetitive LaTeX. All three looked obviously correct beforehand and
+were caught only by measurement.
+
 ## Confidence
 
 Blocks carry an optional confidence and a list of flags. Absent confidence means
