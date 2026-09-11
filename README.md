@@ -9,8 +9,9 @@ what was *read from the page* strictly separate from anything AI *added*.
 
 ## Status
 
-Early. The extraction pipeline and renderer work end to end from the command
-line; the web UI, editor and supplements are not built yet.
+Working end to end: upload a photo, get structured notes with typeset
+mathematics, edit any block, switch themes, export. Smart Supplements and
+verification are not built yet.
 
 ## Why
 
@@ -55,8 +56,20 @@ Tesseract (the baseline backend) is optional: `brew install tesseract`.
 
 ## Use
 
+Web app:
+
+```bash
+uvicorn lectura.api:app --port 8901       # then open http://localhost:8901
+```
+
+Upload a photo, click any block to edit it, switch theme, export Markdown.
+Editing an equation shows a live preview as you type.
+
+Command line:
+
 ```bash
 lectura path/to/photo.heic --theme academic
+lectura out/photo.json --theme dark        # re-render, no model call
 ```
 
 Writes a structured `.json` note and a rendered `.html` file to `./out`.
@@ -75,9 +88,26 @@ small frame and 80–125s for a full-resolution phone photo on an M4.
 ## Development
 
 ```bash
-pytest          # tests
-ruff check .    # lint
+pytest                                  # python tests
+ruff check .                            # lint
+cd frontend && npm install && npm run build   # build the UI into the API
 ```
+
+The frontend builds into `src/lectura/api/static`, which the API serves. For
+frontend work, `npm run dev` proxies API calls to port 8901.
+
+## How good is it?
+
+Measured against hand-written reference transcriptions on four real pages:
+
+| Backend | CER | formula error | exact | time |
+|---|---|---|---|---|
+| Tesseract | 1.069 | 0.992 | 0/28 | 4s |
+| Pix2Text | 0.804 | 0.541 | 1/28 | 15s |
+| Qwen2.5-VL 7B | 0.224 | 0.160 | 7/28 | 613s |
+
+Four pages is a small set - enough to catch a large regression, not enough to
+settle anything. See ARCHITECTURE.md for what these numbers do and do not say.
 
 ## Privacy
 
