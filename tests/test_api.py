@@ -70,3 +70,25 @@ def test_render_rejects_unknown_theme():
         "/api/render", json={"note": note.model_dump(mode="json"), "theme": "nope"}
     )
     assert response.status_code == 400
+
+
+def test_client_side_routes_serve_the_app_shell():
+    # A refresh on /app must not 404: the router lives in the browser.
+    response = client.get("/app")
+    assert response.status_code == 200
+
+
+def test_unknown_api_routes_still_404():
+    assert client.get("/api/nope").status_code == 404
+
+
+@pytest.mark.skipif(not Tesseract.available(), reason="tesseract not installed")
+def test_extract_returns_a_displayable_preview():
+    # Browsers cannot render HEIC, so the server returns what it actually read.
+    response = client.post(
+        "/api/extract?backend=tesseract",
+        files={"file": ("a.png", _png(), "image/png")},
+    )
+    preview = response.json()["preview"]
+    assert preview.startswith("data:image/jpeg;base64,")
+    assert len(preview) > 100

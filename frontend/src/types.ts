@@ -48,6 +48,9 @@ export interface ExtractResponse {
   seconds: number;
   backend: string;
   preprocess: string;
+  /** Data URL of the corrected image the model read. The upload itself is
+   *  often HEIC, which browsers cannot display. */
+  preview: string;
 }
 
 export const THEMES = ["academic", "dark", "minimal", "notebook"] as const;

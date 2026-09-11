@@ -8,6 +8,7 @@ session store and nothing to deploy beyond the process itself.
 
 from __future__ import annotations
 
+import base64
 import io
 import os
 from pathlib import Path
@@ -49,6 +50,14 @@ class ExtractResponse(BaseModel):
     seconds: float
     backend: str
     preprocess: str
+    preview: str
+    """Data URL of the image the model actually read.
+
+    Returned rather than letting the browser display the upload directly:
+    browsers cannot decode HEIC, which is what most phone photos arrive as, and
+    a preview of the corrected image is the more useful comparison anyway - it
+    shows what the model saw, not what the camera produced.
+    """
 
 
 class RenderRequest(BaseModel):
@@ -94,8 +103,20 @@ async def extract(
 
     note = build_note(raw, source_image=file.filename)
     return ExtractResponse(
-        note=note, seconds=raw.seconds, backend=raw.backend, preprocess=steps
+        note=note,
+        seconds=raw.seconds,
+        backend=raw.backend,
+        preprocess=steps,
+        preview=_preview_data_url(image),
     )
+
+
+def _preview_data_url(image: Image.Image, longest_edge: int = 1100) -> str:
+    thumbnail = ingest.fit_within(image, longest_edge)
+    buffer = io.BytesIO()
+    thumbnail.save(buffer, format="JPEG", quality=78, optimize=True)
+    encoded = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{encoded}"
 
 
 @app.post("/api/render", response_class=HTMLResponse)
@@ -121,10 +142,21 @@ def _open(payload: bytes, filename: str) -> Image.Image:
     return ImageOps.exif_transpose(image).convert("RGB")
 
 
-# Built frontend, when present. Mounted last so /api routes win.
+# Built frontend, when present. Registered last so /api routes take priority.
 if STATIC_DIR.exists():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
 
     @app.get("/")
     def index() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
+
+    @app.get("/{path:path}")
+    def spa(path: str) -> FileResponse:
+        """Serve the app shell for client-side routes such as /app.
+
+        Without this a refresh on any route but / returns 404, because the
+        router lives in the browser and the server knows only one document.
+        """
+        if path.startswith("api/"):
+            raise HTTPException(404, "not found")
         return FileResponse(STATIC_DIR / "index.html")
