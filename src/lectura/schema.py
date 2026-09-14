@@ -21,7 +21,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 
 class Origin(StrEnum):
@@ -73,9 +73,20 @@ class Block(BaseModel):
     bbox: BBox | None = None
     source_image: str | None = None
     flags: list[Flag] = Field(default_factory=list)
+    reviewed: bool = False
+    """A person checked this block against the source and accepted it as read.
+
+    Separate from origin on purpose. Confirming a transcription is not writing
+    it: the content is still what came off the page, and the model's confidence
+    and flags still describe the model. Before this existed, the only way to
+    clear a warning was to save the block unchanged, which relabelled extracted
+    text as user-authored and threw the confidence away.
+    """
 
     def is_uncertain(self, threshold: float = 0.75) -> bool:
         """True when the editor should surface this block for review first."""
+        if self.reviewed:
+            return False
         if self.flags:
             return True
         return self.confidence is not None and self.confidence < threshold

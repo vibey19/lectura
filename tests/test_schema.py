@@ -42,3 +42,18 @@ def test_note_round_trips_through_json():
     assert restored.title == "T"
     assert restored.blocks[0].content == r"\alpha"
     assert restored.schema_version == note.schema_version
+
+
+def test_a_reviewed_block_keeps_its_provenance_but_no_longer_needs_review():
+    block = Block(type=BlockType.TEXT, content="x", confidence=0.3,
+                  flags=[Flag.LOW_CONFIDENCE])
+    assert block.is_uncertain()
+    checked = block.model_copy(update={"reviewed": True})
+    assert not checked.is_uncertain()
+    assert checked.origin is Origin.EXTRACTED
+    assert checked.confidence == 0.3
+
+
+def test_notes_saved_before_review_existed_still_load():
+    legacy = {"schema_version": "1.0", "blocks": [{"type": "text", "content": "x"}]}
+    assert Note.model_validate(legacy).blocks[0].reviewed is False

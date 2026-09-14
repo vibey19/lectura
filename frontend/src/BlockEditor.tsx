@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { IconCheck, IconDown, IconTrash, IconUp, IconWarn } from "./Icons";
 import { RichText, TeX } from "./TeX";
+import { applyEdit, blockSource, convertBlock } from "./blocks";
 import { LIST_TYPES, isUncertain, type Block, type BlockType } from "./types";
 
 interface Props {
@@ -30,7 +31,7 @@ export function BlockEditor({ block, active, onFocus, onChange, onDelete, onMove
   const textarea = useRef<HTMLTextAreaElement>(null);
 
   const isList = LIST_TYPES.includes(block.type);
-  const source = isList ? block.items.join("\n") : block.content;
+  const source = blockSource(block);
   const uncertain = isUncertain(block);
 
   useEffect(() => {
@@ -57,12 +58,8 @@ export function BlockEditor({ block, active, onFocus, onChange, onDelete, onMove
   }
 
   function commit() {
-    const next = isList
-      ? { ...block, items: draft.split("\n").map((l) => l.trim()).filter(Boolean) }
-      : { ...block, content: draft.trim() };
-    // Edited content is the user's now: it is no longer a model guess, so the
-    // warning flags and the model's confidence no longer describe it.
-    onChange({ ...next, origin: "user", flags: [], confidence: null });
+    const next = applyEdit(block, draft);
+    if (next !== block) onChange(next);
     setEditing(false);
   }
 
@@ -97,7 +94,7 @@ export function BlockEditor({ block, active, onFocus, onChange, onDelete, onMove
             <span className="sr-only">Block type</span>
             <select
               value={block.type}
-              onChange={(e) => onChange({ ...block, type: e.target.value as BlockType })}
+              onChange={(e) => onChange(convertBlock(block, e.target.value as BlockType))}
             >
               {Object.entries(TYPE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
@@ -111,8 +108,19 @@ export function BlockEditor({ block, active, onFocus, onChange, onDelete, onMove
               <IconWarn size={12} /> check
             </span>
           )}
+          {uncertain && !editing && (
+            // Confirming a reading is not rewriting it: provenance and the
+            // model's confidence stay, only the request for review is cleared.
+            <button className="chip chip-action" onClick={() => onChange({ ...block, reviewed: true })}
+                    title="Mark as checked against the source">
+              <IconCheck size={12} /> looks right
+            </button>
+          )}
           {block.origin === "user" && (
             <span className="chip chip-ok"><IconCheck size={12} /> edited</span>
+          )}
+          {block.reviewed && block.origin !== "user" && (
+            <span className="chip chip-ok"><IconCheck size={12} /> checked</span>
           )}
           {block.confidence !== null && !uncertain && (
             <span className="chip chip-quiet mono">

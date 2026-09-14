@@ -32,6 +32,9 @@ export interface Block {
   bbox: BBox | null;
   source_image: string | null;
   flags: string[];
+  /** Checked against the source and accepted as read. Absent in notes saved
+   *  before schema 1.1. */
+  reviewed?: boolean;
 }
 
 export interface Note {
@@ -67,6 +70,7 @@ export const CONFIDENCE_THRESHOLD = 0.75;
  *  first compared its confidence against its own position and the interface
  *  reported 12 of 13 blocks as doubtful when none were. */
 export function isUncertain(block: Block): boolean {
+  if (block.reviewed) return false;
   if (block.flags.length > 0) return true;
   return block.confidence !== null && block.confidence < CONFIDENCE_THRESHOLD;
 }

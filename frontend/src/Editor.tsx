@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BlockEditor } from "./BlockEditor";
+import { outlineLabel, toMarkdown } from "./blocks";
 import {
   IconClose, IconDownload, IconImage, IconLayers, IconPlus,
   IconRedo, IconUndo, IconUpload, IconWarn,
@@ -10,22 +11,18 @@ import {
   type DemoEntry,
 } from "./api";
 import { downscale } from "./downscale";
+import { emptyHistory, historyReducer, loadStoredDoc, storeDoc } from "./history";
 import { isUncertain, type Block, type BlockType, type Note, type Theme, THEMES } from "./types";
-
-const STORAGE_KEY = "lectura.note.v1";
-const HISTORY_LIMIT = 60;
 
 type Status = { kind: "idle" } | { kind: "busy" } | { kind: "error"; message: string };
 
 export default function Editor() {
-  const [note, setNoteRaw] = useState<Note | null>(null);
-  const [past, setPast] = useState<Note[]>([]);
-  const [future, setFuture] = useState<Note[]>([]);
+  const [history, dispatch] = useReducer(historyReducer, emptyHistory);
+  const { doc, past, future } = history;
+  const note = doc?.note ?? null;
+  const sourceUrl = doc?.preview ?? null;
   const [theme, setTheme] = useState<Theme>("academic");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
-  const [meta, setMeta] = useState("");
-  const [truncated, setTruncated] = useState(false);
-  const [sourceUrl, setSourceUrl] = useState<string | null>(null);
   const [showOutline, setShowOutline] = useState(true);
   const [showSource, setShowSource] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -39,22 +36,13 @@ export default function Editor() {
   /* ----------------------------------------------------------- persistence */
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setNoteRaw(JSON.parse(saved));
-    } catch {
-      /* a corrupt or unavailable store must not block the editor */
-    }
+    const stored = loadStoredDoc();
+    if (stored) dispatch({ kind: "restore", doc: stored });
   }, []);
 
   useEffect(() => {
-    if (!note) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(note));
-    } catch {
-      /* private browsing, quota, blocked storage: not worth interrupting for */
-    }
-  }, [note]);
+    if (doc) storeDoc(doc);
+  }, [doc]);
 
   useEffect(() => {
     void demoIndex().then(setExamples);
@@ -72,40 +60,9 @@ export default function Editor() {
 
   /* --------------------------------------------------------------- history */
 
-  const commit = useCallback(
-    (next: Note) => {
-      setNoteRaw((current) => {
-        if (current) setPast((p) => [...p.slice(-HISTORY_LIMIT), current]);
-        setFuture([]);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const undo = useCallback(() => {
-    setPast((p) => {
-      if (p.length === 0) return p;
-      const previous = p[p.length - 1];
-      setNoteRaw((current) => {
-        if (current) setFuture((f) => [current, ...f]);
-        return previous;
-      });
-      return p.slice(0, -1);
-    });
-  }, []);
-
-  const redo = useCallback(() => {
-    setFuture((f) => {
-      if (f.length === 0) return f;
-      const [next, ...rest] = f;
-      setNoteRaw((current) => {
-        if (current) setPast((p) => [...p, current]);
-        return next;
-      });
-      return rest;
-    });
-  }, []);
+  const commit = useCallback((next: Note) => dispatch({ kind: "edit", note: next }), []);
+  const undo = useCallback(() => dispatch({ kind: "undo" }), []);
+  const redo = useCallback(() => dispatch({ kind: "redo" }), []);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -126,11 +83,7 @@ export default function Editor() {
   const openExample = useCallback(async (slug: string) => {
     try {
       const { note: loaded, preview } = await demoNote(slug);
-      setPast([]); setFuture([]);
-      setNoteRaw(loaded);
-      setSourceUrl(preview);
-      setTruncated(false);
-      setMeta("example");
+      dispatch({ kind: "open", doc: { note: loaded, preview, truncated: false, meta: "example" } });
       setShowSource(true);
       setStatus({ kind: "idle" });
     } catch (error) {
@@ -146,14 +99,18 @@ export default function Editor() {
     try {
       const file = await downscale(raw_file);
       const result = await extract(file, { signal: controller.signal });
-      setPast([]);
-      setFuture([]);
-      setNoteRaw(result.note);
       // The server returns the corrected image it read, which the browser can
       // always display; the raw upload is frequently HEIC and cannot be shown.
-      setSourceUrl(result.preview);
-      setTruncated(result.truncated);
-      setMeta(`${result.backend} · ${result.seconds}s`);
+      // Opening is undoable, so a new upload never destroys the previous note.
+      dispatch({
+        kind: "open",
+        doc: {
+          note: result.note,
+          preview: result.preview,
+          truncated: result.truncated,
+          meta: `${result.backend} · ${result.seconds}s`,
+        },
+      });
       setStatus({ kind: "idle" });
       setShowSource(true);
     } catch (error) {
@@ -256,12 +213,9 @@ export default function Editor() {
 
         <div className="toolbar-title">
           {note && (
-            <input
-              className="title-input"
+            <TitleInput
               value={note.title ?? ""}
-              placeholder="Untitled notes"
-              aria-label="Note title"
-              onChange={(e) => commit({ ...note, title: e.target.value })}
+              onCommit={(title) => commit({ ...note, title: title || null })}
             />
           )}
         </div>
@@ -312,7 +266,7 @@ export default function Editor() {
                   >
                     <span className={`dot dot-${block.type}`} aria-hidden="true" />
                     <span className="outline-text">
-                      {preview(block) || <em>empty</em>}
+                      {outlineLabel(block) || <em>empty</em>}
                     </span>
                     {isUncertain(block) && <IconWarn size={12} />}
                   </button>
@@ -354,7 +308,7 @@ export default function Editor() {
 
           {note && status.kind !== "busy" && (
             <>
-              {truncated && (
+              {doc?.truncated && (
                 <div className="notice notice-warn" role="status">
                   <IconWarn size={18} />
                   <div>
@@ -398,7 +352,7 @@ export default function Editor() {
               <footer className="statusbar">
                 <span>{note.blocks.length} blocks</span>
                 <span>{wordCount} words</span>
-                {meta && <span className="mono">{meta}</span>}
+                {doc?.meta && <span className="mono">{doc.meta}</span>}
                 <span className="grow" />
                 <span>Saved locally</span>
               </footer>
@@ -525,57 +479,35 @@ function InsertHere({ onInsert }: { onInsert: () => void }) {
   );
 }
 
-const SYMBOLS: Record<string, string> = {
-  alpha: "α", beta: "β", gamma: "γ", delta: "δ", epsilon: "ε", zeta: "ζ",
-  eta: "η", theta: "θ", kappa: "κ", lambda: "λ", mu: "μ", nu: "ν", xi: "ξ",
-  pi: "π", rho: "ρ", sigma: "σ", tau: "τ", phi: "φ", chi: "χ", psi: "ψ",
-  omega: "ω", Delta: "Δ", Gamma: "Γ", Lambda: "Λ", Phi: "Φ", Pi: "Π",
-  Sigma: "Σ", Omega: "Ω", Theta: "Θ",
-  partial: "∂", nabla: "∇", sum: "Σ", prod: "Π", int: "∫", sqrt: "√",
-  infty: "∞", times: "×", cdot: "·", pm: "±", mp: "∓", div: "÷",
-  leq: "≤", geq: "≥", neq: "≠", approx: "≈", equiv: "≡", propto: "∝",
-  in: "∈", subset: "⊂", cup: "∪", cap: "∩", forall: "∀", exists: "∃",
-  rightarrow: "→", leftarrow: "←", leftrightarrow: "↔", Rightarrow: "⇒",
-  to: "→", mapsto: "↦", ell: "ℓ", hbar: "ℏ",
-};
+/** The title commits when editing finishes rather than on every keystroke,
+ *  which filled the undo history with one entry per letter typed. */
+function TitleInput({ value, onCommit }: { value: string; onCommit: (title: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  const cancelled = useRef(false);
+  useEffect(() => setDraft(value), [value]);   // follow undo and newly opened notes
 
-/** Commands that only affect layout. Their names are noise in a label. */
-const STRUCTURAL = new Set([
-  "frac", "left", "right", "big", "Big", "bigg", "Bigg", "begin", "end",
-  "text", "mathrm", "mathbf", "mathcal", "mathbb", "operatorname", "displaystyle",
-  "vec", "hat", "bar", "tilde", "dot", "overline", "underline", "quad", "qquad",
-]);
+  const finish = () => {
+    if (cancelled.current) { cancelled.current = false; return; }
+    const title = draft.trim();
+    if (title !== value) onCommit(title);
+  };
 
-/** A short, readable label for the outline.
- *
- *  Stripping LaTeX wholesale leaves orphaned subscript markers - "\\mu_i" became
- *  "_i" - while keeping command names turns "\\nabla\\Phi" into "nablaPhi".
- *  Symbols are substituted, layout commands dropped, and braces removed.
- */
-function preview(block: Block): string {
-  const source = block.content || block.items[0] || "";
-  return source
-    .replace(/\\([a-zA-Z]+)/g, (_, name: string) =>
-      SYMBOLS[name] ?? (STRUCTURAL.has(name) ? " " : name),
-    )
-    .replace(/[{}$]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 44);
-}
-
-function toMarkdown(note: Note): string {
-  const lines: string[] = [];
-  if (note.title) lines.push(`# ${note.title}`, "");
-  for (const block of note.blocks) {
-    switch (block.type) {
-      case "heading": lines.push(`${"#".repeat(block.level ?? 2)} ${block.content}`, ""); break;
-      case "equation": lines.push("$$", block.content, "$$", ""); break;
-      case "bullet_list": lines.push(...block.items.map((i) => `- ${i}`), ""); break;
-      case "numbered_list": lines.push(...block.items.map((i, n) => `${n + 1}. ${i}`), ""); break;
-      case "code": lines.push("```", block.content, "```", ""); break;
-      default: lines.push(block.content, "");
-    }
-  }
-  return lines.join("\n");
+  return (
+    <input
+      className="title-input"
+      value={draft}
+      placeholder="Untitled notes"
+      aria-label="Note title"
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={finish}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          cancelled.current = true;
+          setDraft(value);
+          e.currentTarget.blur();
+        }
+      }}
+    />
+  );
 }

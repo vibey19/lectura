@@ -37,4 +37,5 @@ jobs:
       # Type errors would otherwise reach production: the built frontend is not
       # committed, so nothing else checks it.
       - run: npx tsc --noEmit
+      - run: npm test
       - run: npm run build:static
