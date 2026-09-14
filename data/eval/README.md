@@ -14,8 +14,12 @@ licence, so the set is reproducible without redistributing anything.
 - `formulas` is LaTeX in reading order. Continuation lines are merged into the
   expression they continue: `z = wx + b`, `= (-2)·1 + 2`, `= 0` is recorded as
   one expression, because that is the statement a reader sees.
-- Scoring matches formulas positionally, so a missed equation shifts everything
-  after it. That is deliberate - a dropped formula is a real failure.
+- The primary formula score concatenates every expression on each side and
+  compares the two token streams, so where line breaks fall does not count.
+  Exact match is also reported, and that one is positional: a missed equation
+  shifts everything after it, which is deliberate - a dropped formula is a real
+  failure.
+- Run `lectura-eval` to score a backend against these pages.
 
 ## Adding a page
 

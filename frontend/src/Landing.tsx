@@ -50,7 +50,7 @@ export default function Landing() {
             {
               n: "02",
               h: "It rebuilds the structure",
-              p: "Headings, lists, definitions and equations become typed blocks in one canonical document, so the structure survives independently of how it looks.",
+              p: "Headings, lists and equations become typed blocks in one canonical document, so the structure survives independently of how it looks.",
             },
             {
               n: "03",
@@ -118,15 +118,15 @@ export default function Landing() {
             <tbody>
               <tr>
                 <th scope="row">Classical OCR <span className="sub">Tesseract</span></th>
-                <td>1.069</td><td>0.992</td><td>0 / 28</td>
+                <td>1.058</td><td>0.997</td><td>0 / 28</td>
               </tr>
               <tr>
                 <th scope="row">Document pipeline <span className="sub">Pix2Text</span></th>
-                <td>0.804</td><td>0.541</td><td>1 / 28</td>
+                <td>0.689</td><td>0.510</td><td>1 / 28</td>
               </tr>
               <tr className="best">
                 <th scope="row">Lectura <span className="sub">Qwen2.5-VL 7B</span></th>
-                <td>0.224</td><td>0.160</td><td>7 / 28</td>
+                <td>0.225</td><td>0.159</td><td>7 / 28</td>
               </tr>
             </tbody>
           </table>

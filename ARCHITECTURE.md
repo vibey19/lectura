@@ -34,7 +34,7 @@ image ──► ingest ──► preprocess ──► extract ──► structur
 | Stage | Module | Responsibility |
 |---|---|---|
 | Ingest | `ingest.py` | HEIC decode, EXIF rotation, resolution policy |
-| Preprocess | `preprocess.py` | page detection, dewarp, illumination — *planned* |
+| Preprocess | `preprocess.py` | page detection, dewarp, illumination |
 | Extract | `extract/` | transcription only, behind one interface |
 | Structure | `structure.py` | typed blocks, list merging, heading detection |
 | Verify | `verify.py` | flags doubt; never edits — *planned* |
@@ -73,7 +73,14 @@ and generated augmentation cannot be quietly lost.
 
 **Blocks point back at the image.** A normalised bounding box means the interface
 can always show the user what a block was derived from, which is what makes an
-uncertain transcription reviewable instead of merely doubtful.
+uncertain transcription reviewable instead of merely doubtful. No backend fills
+the box in yet - the VLM is asked for text only - so this is the contract the
+interface is built against rather than something it can show today.
+
+A third field, `reviewed`, records that a person checked a block against the
+source and accepted it. It is kept apart from origin: confirming a transcription
+is not writing it, so the block stays `extracted` and keeps the model's
+confidence, and only the request for review is cleared.
 
 ## Evaluation
 
@@ -96,27 +103,48 @@ the wrong thing.
 
 Positional exact-match is kept as a strict secondary signal.
 
+Layout inside a formula is normalised away before either comparison: spacing
+and sizing commands, and the `aligned` wrapper with its `&` and `\\` that the
+structuring stage uses to line up derivation steps. Matrix separators are kept,
+because a transposed matrix is a genuine misreading.
+
+`lectura-eval` runs a backend over the set. Each page's raw extraction is
+cached under `results/raw/`, one directory per backend configuration, so a
+change to structuring or scoring is re-measured in well under a second rather
+than by another model pass. Every structuring change since has been checked
+against all three backends that way.
+
 ## Backend comparison
 
-Four labelled pages, raw input at 2200px, identical metric:
+Four labelled pages, raw input at 2200px, identical metric, re-measured after
+structuring learned to recognise bare sub- and superscripts and to join
+derivation steps:
 
 | Backend | CER | formula error | exact | time |
 |---|---|---|---|---|
-| Tesseract | 1.069 | 0.992 | 0/28 | 4s |
-| Pix2Text | 0.804 | 0.541 | 1/28 | 15s |
-| Qwen2.5-VL 7B | **0.224** | **0.160** | **7/28** | 613s |
+| Tesseract | 1.058 | 0.997 | 0/28 | 2s |
+| Pix2Text | 0.689 | 0.510 | 1/28 | 8s |
+| Qwen2.5-VL 7B | **0.225** | **0.159** | **7/28** | 294s |
 
-Tesseract's formula error is 0.992 - nothing recoverable, scoring exactly 1.000
-on three of four pages. Its CER of 1.903 on the derivatives page is worse than
+The VLM row is reproducible to the third decimal: a fresh run matched the first
+measurement within 0.001. Wall-clock times roughly halved against the first
+measurement on the same machine, from newer runtimes rather than from anything
+in this repository, so compare times within a table, not across tables.
+
+Tesseract's formula error is 0.997 - nothing recoverable, scoring exactly 1.000
+on three of four pages. Its CER of 1.912 on the derivatives page is worse than
 emitting nothing at all, because it invents more wrong characters than the page
 contains.
 
 Pix2Text splits exactly along the line this project was founded on. Its formula
 error is roughly half Tesseract's, so the formula recogniser does work on
-handwriting, while its text CER barely improves: it recovered the square-root
+handwriting, while its text stays poor: it recovered the square-root
 and fraction structure of an expression while reading the heading above it as
 "P R O B / E M-3". It is a formula specialist, not a whole-page baseline for
-this material.
+this material. Its CER fell from 0.811 to 0.689 when structuring started
+recognising lines like `x_{i,1}` as notation, which says as much about the
+earlier scoring as about Pix2Text: subscripted expressions had been counted as
+badly read prose.
 
 The VLM wins on both axes by a wide margin and loses on latency by roughly 40x.
 That gap is a design input rather than a defect: a router that sends clean
@@ -124,9 +152,15 @@ printed material to the fast staged pipeline and handwriting to the VLM is the
 obvious way to keep a free-tier demo responsive.
 
 Per-page numbers matter more than the averages. The VLM scores 0.022 formula
-error on dense symbolic algebra and 0.395 on a page of numeric substitution -
-the hard case is arithmetic with small digits, not mathematics with large
-notation, which is the opposite of what one would guess.
+error on dense symbolic algebra and 0.395 on a page of numeric substitution.
+Reading the raw output for that page shows why, and it is not the digits: the
+model wrote no LaTeX at all, giving `w1 * x + b1` for `w_1 \cdot x + b_1` and
+`1 / (1 + e^-x)` for a fraction, while reading the values themselves correctly.
+It does the same on the mostly-prose page, where one formula hides it, and uses
+LaTeX on 25 of 31 lines across the two notation-heavy pages. Simple notation
+gets written the way one would type it. That is a prompting and model-choice
+problem, not a structuring one, and it is the first thing to test on any
+replacement model.
 
 ## What preprocessing is measured to do
 

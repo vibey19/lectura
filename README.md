@@ -90,8 +90,13 @@ small frame and 80–125s for a full-resolution phone photo on an M4.
 ```bash
 pytest                                  # python tests
 ruff check .                            # lint
-cd frontend && npm install && npm run build   # build the UI into the API
+lectura-eval                            # score the VLM on the labelled set
+cd frontend && npm install && npm test && npm run build   # test and build the UI
 ```
+
+`lectura-eval` caches each page's raw extraction under `results/raw/`, so after
+the first run, changes to structuring or scoring are re-measured instantly. Pass
+`-b tesseract` or `-b pix2text` for the baselines, and `--refresh` to re-read.
 
 The frontend builds into `src/lectura/api/static`, which the API serves. For
 frontend work, `npm run dev` proxies API calls to port 8901.
@@ -102,9 +107,9 @@ Measured against hand-written reference transcriptions on four real pages:
 
 | Backend | CER | formula error | exact | time |
 |---|---|---|---|---|
-| Tesseract | 1.069 | 0.992 | 0/28 | 4s |
-| Pix2Text | 0.804 | 0.541 | 1/28 | 15s |
-| Qwen2.5-VL 7B | 0.224 | 0.160 | 7/28 | 613s |
+| Tesseract | 1.058 | 0.997 | 0/28 | 2s |
+| Pix2Text | 0.689 | 0.510 | 1/28 | 8s |
+| Qwen2.5-VL 7B | 0.225 | 0.159 | 7/28 | 294s |
 
 Four pages is a small set - enough to catch a large regression, not enough to
 settle anything. See ARCHITECTURE.md for what these numbers do and do not say.
