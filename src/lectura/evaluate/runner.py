@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 from lectura import ingest
 from lectura.evaluate.dataset import Reference, load_all
@@ -16,7 +18,7 @@ from lectura.evaluate.metrics import (
     latex_stream_distance,
     word_error_rate,
 )
-from lectura.extract.base import ExtractionError, Extractor
+from lectura.extract.base import ExtractionError, Extractor, RawExtraction
 from lectura.preprocess import preprocess
 from lectura.schema import BlockType, Note
 from lectura.structure import build_note
@@ -93,6 +95,23 @@ def score_page(reference: Reference, note: Note) -> PageScore:
     )
 
 
+def _read_cached(path: Path | None) -> RawExtraction | None | Literal["failed"]:
+    if path is None or not path.exists():
+        return None
+    data = json.loads(path.read_text())
+    if data.get("failed"):
+        return "failed"
+    return RawExtraction.from_dict(data)
+
+
+def _write_cached(path: Path | None, raw: RawExtraction | None) -> None:
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"failed": True} if raw is None else raw.to_dict()
+    path.write_text(json.dumps(payload, indent=1, ensure_ascii=False))
+
+
 def evaluate(
     extractor: Extractor,
     references: list[Reference] | None = None,
@@ -100,7 +119,17 @@ def evaluate(
     max_edge: int = 2200,
     use_preprocess: bool = True,
     root: Path = Path("data/eval"),
+    cache: Path | None = None,
 ) -> Report:
+    """Score `extractor` over the labelled set.
+
+    With `cache`, each page's raw extraction is stored on first read and reused
+    afterwards. A model pass over the set takes around ten minutes while
+    structuring and scoring take milliseconds, so caching is what makes changes
+    to `structure.py` measurable at all. The cache is keyed by page only; the
+    caller is responsible for giving each backend configuration its own
+    directory.
+    """
     references = references if references is not None else load_all(root)
     scores: list[PageScore] = []
     failures: list[str] = []
@@ -108,16 +137,24 @@ def evaluate(
 
     for reference in references:
         path = Path(reference.source)
-        if not path.exists():
-            continue
-        image = ingest.load(path)
-        if use_preprocess:
-            image = preprocess(image).image
-        image = ingest.fit_within(image, max_edge)
+        cached_path = cache / f"{reference.page_id}.json" if cache else None
+        cached = _read_cached(cached_path)
 
-        try:
-            raw = extractor.extract(image)
-        except ExtractionError:
+        if cached is None:
+            if not path.exists():
+                continue
+            image = ingest.load(path)
+            if use_preprocess:
+                image = preprocess(image).image
+            image = ingest.fit_within(image, max_edge)
+            try:
+                cached = extractor.extract(image)
+            except ExtractionError:
+                cached = "failed"
+            _write_cached(cached_path, None if cached == "failed" else cached)
+
+        raw = cached
+        if raw == "failed":
             # Reading nothing is a result, not a reason to abandon the run.
             failures.append(reference.page_id)
             scores.append(

@@ -42,6 +42,43 @@ class RawExtraction:
     seconds: float = 0.0
     truncated: bool = False   # the model hit its output limit mid-answer
 
+    def to_dict(self) -> dict:
+        """Plain JSON form, so a slow model run can be cached and re-scored."""
+        return {
+            "items": [
+                {
+                    "text": item.text,
+                    "confidence": item.confidence,
+                    "bbox": item.bbox.model_dump() if item.bbox else None,
+                    "hint": item.hint,
+                }
+                for item in self.items
+            ],
+            "title_hint": self.title_hint,
+            "backend": self.backend,
+            "seconds": self.seconds,
+            "truncated": self.truncated,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> RawExtraction:
+        items = [
+            RawItem(
+                text=item["text"],
+                confidence=item.get("confidence"),
+                bbox=BBox(**item["bbox"]) if item.get("bbox") else None,
+                hint=item.get("hint"),
+            )
+            for item in data.get("items", [])
+        ]
+        return cls(
+            items=items,
+            title_hint=data.get("title_hint"),
+            backend=data.get("backend", "unknown"),
+            seconds=data.get("seconds", 0.0),
+            truncated=data.get("truncated", False),
+        )
+
 
 class Extractor(Protocol):
     name: str
