@@ -58,7 +58,18 @@ docker run -p 7860:7860 \
 | `LECTURA_MODEL` | `qwen2.5vl:7b` | Ollama model to serve |
 | `LECTURA_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated CORS origins |
 | `LECTURA_RATE_LIMIT` | `12` | Extractions per client per hour; 0 disables |
+| `LECTURA_TRUSTED_PROXIES` | `0` | Reverse proxies in front of the API; see below |
 | `PORT` | `7860` | Hugging Face Spaces expects 7860 |
+
+### Behind a proxy
+
+The rate limit identifies clients by address. `X-Forwarded-For` is ignored by
+default, because a client can put anything in it. Behind a platform proxy -
+Hugging Face Spaces, a load balancer, nginx - every request appears to come
+from the proxy, so set `LECTURA_TRUSTED_PROXIES` to the number of proxies in
+the chain (usually `1`). The limit then uses the address your own proxy
+recorded and ignores anything the client added in front of it. Left at `0`
+behind a proxy, the limit still holds but is shared by all visitors.
 
 ### On free CPU hosting, be realistic
 
@@ -77,3 +88,4 @@ use.
 - [ ] `VITE_API_URL` set, or deliberately left unset
 - [ ] `LECTURA_ALLOWED_ORIGINS` includes the deployed frontend origin
 - [ ] Rate limit appropriate for the host
+- [ ] `LECTURA_TRUSTED_PROXIES` matches the proxies in front of the API

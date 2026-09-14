@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import io
 import os
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -46,7 +47,17 @@ ALLOWED_ORIGINS = [
 # One extraction occupies a CPU for minutes. Without a ceiling a public demo is
 # trivially turned into someone else's compute.
 RATE_LIMIT_PER_HOUR = int(os.getenv("LECTURA_RATE_LIMIT", "12"))
+
+# How many reverse proxies sit in front of the server. Each appends the address
+# it received the request from to X-Forwarded-For, so the entry that many places
+# from the right was written by our own proxy and can be trusted; everything to
+# its left was supplied by the client. With 0 the header is ignored entirely -
+# otherwise any client could reset its quota by sending a fresh made-up address.
+TRUSTED_PROXIES = int(os.getenv("LECTURA_TRUSTED_PROXIES", "0"))
+
+_MAX_TRACKED_CLIENTS = 10_000
 _requests: dict[str, list[float]] = defaultdict(list)
+_requests_lock = threading.Lock()
 
 BACKENDS = {
     "vlm": lambda: OllamaVLM(model=os.getenv("LECTURA_MODEL", "qwen2.5vl:7b")),
@@ -63,23 +74,40 @@ app.add_middleware(
 )
 
 
+def _client_id(request: Request) -> str:
+    if TRUSTED_PROXIES > 0:
+        hops = [
+            hop.strip()
+            for hop in request.headers.get("x-forwarded-for", "").split(",")
+            if hop.strip()
+        ]
+        if len(hops) >= TRUSTED_PROXIES:
+            return hops[-TRUSTED_PROXIES]
+    return request.client.host if request.client else "unknown"
+
+
 def _rate_limit(request: Request) -> None:
     """Allow a fixed number of extractions per client per hour."""
     if RATE_LIMIT_PER_HOUR <= 0:
         return
-    client = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
-        request.client.host if request.client else "unknown"
-    )
+    client = _client_id(request)
     now = time.time()
-    recent = [t for t in _requests[client] if now - t < 3600]
-    if len(recent) >= RATE_LIMIT_PER_HOUR:
-        recent_at = min(recent)
-        wait = int((3600 - (now - recent_at)) / 60) + 1
-        raise HTTPException(
-            429, f"rate limit reached; try again in about {wait} minutes"
-        )
-    recent.append(now)
-    _requests[client] = recent
+    with _requests_lock:
+        # Extractions run on worker threads, so the check and the append must
+        # not interleave. Idle clients are forgotten once the table grows, so
+        # a stream of distinct addresses cannot grow it without bound.
+        if len(_requests) > _MAX_TRACKED_CLIENTS:
+            for key in [k for k, v in _requests.items() if not v or now - v[-1] >= 3600]:
+                del _requests[key]
+
+        recent = [t for t in _requests[client] if now - t < 3600]
+        if len(recent) >= RATE_LIMIT_PER_HOUR:
+            wait = int((3600 - (now - min(recent))) / 60) + 1
+            raise HTTPException(
+                429, f"rate limit reached; try again in about {wait} minutes"
+            )
+        recent.append(now)
+        _requests[client] = recent
 
 
 class ExtractResponse(BaseModel):
@@ -112,25 +140,36 @@ def health() -> dict:
 
 
 @app.post("/api/extract", response_model=ExtractResponse)
-async def extract(
+def extract(
     request: Request,
     file: UploadFile = File(...),
     backend: str = "vlm",
     max_edge: int = 2200,
     use_preprocess: bool = True,
 ) -> ExtractResponse:
+    """Read one image into a note.
+
+    A plain `def`, deliberately. Everything below blocks - image decoding,
+    OpenCV, and a model call that runs for minutes - and FastAPI runs plain
+    functions on a worker thread. As `async def` the same code ran on the event
+    loop itself, so a single extraction froze every other request, the health
+    check included, until it finished.
+    """
     if backend not in BACKENDS:
         raise HTTPException(400, f"unknown backend {backend!r}")
-    _rate_limit(request)
 
-    payload = await file.read()
+    payload = file.file.read(MAX_UPLOAD_BYTES + 1)
     if len(payload) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "image larger than 20MB")
 
     try:
-        image = _open(payload, file.filename or "upload")
+        image = ingest.decode(payload)
     except (UnidentifiedImageError, OSError) as exc:
         raise HTTPException(415, f"cannot read image: {exc}") from exc
+
+    # Charged only once the upload is known to be usable: a mistyped file
+    # should not cost the user one of their extractions.
+    _rate_limit(request)
 
     steps = "skipped"
     if use_preprocess:
@@ -171,21 +210,6 @@ def render_note(request: RenderRequest) -> HTMLResponse:
     if request.theme not in available_themes():
         raise HTTPException(400, f"unknown theme {request.theme!r}")
     return HTMLResponse(render(request.note, request.theme))
-
-
-def _open(payload: bytes, filename: str) -> Image.Image:
-    """Decode an upload, routing HEIC through the ingest path."""
-    if Path(filename).suffix.lower() in {".heic", ".heif"}:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(suffix=Path(filename).suffix) as handle:
-            handle.write(payload)
-            handle.flush()
-            return ingest.load(handle.name)
-    from PIL import ImageOps
-
-    image = Image.open(io.BytesIO(payload))
-    return ImageOps.exif_transpose(image).convert("RGB")
 
 
 # Built frontend, when present. Registered last so /api routes take priority.

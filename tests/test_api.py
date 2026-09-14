@@ -137,3 +137,75 @@ def test_path_traversal_cannot_escape_the_static_root():
     for attempt in ("../pyproject.toml", "../../README.md", "..%2fpyproject.toml"):
         body = client.get(f"/{attempt}").text
         assert "[project]" not in body
+
+
+def test_extraction_does_not_run_on_the_event_loop():
+    # As `async def`, a multi-minute model call blocked every other request -
+    # the health check included - until it finished. A plain function is run
+    # on a worker thread instead.
+    import inspect
+
+    import lectura.api.server as app_module
+
+    assert not inspect.iscoroutinefunction(app_module.extract)
+
+
+def _heic() -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", (120, 90), (240, 240, 240)).save(buffer, format="HEIF")
+    return buffer.getvalue()
+
+
+def test_heic_uploads_decode_without_macos_tools():
+    # Decoding used to shell out to macOS `sips`, so the Linux container
+    # rejected every iPhone photo with a 415.
+    from lectura import ingest
+
+    assert ingest.decode(_heic()).size == (120, 90)
+
+
+@pytest.mark.skipif(not Tesseract.available(), reason="tesseract not installed")
+def test_heic_upload_is_accepted_even_when_misnamed():
+    response = client.post(
+        "/api/extract?backend=tesseract",
+        files={"file": ("photo.jpg", _heic(), "image/jpeg")},
+    )
+    assert response.status_code != 415
+
+
+def _request(forwarded: str | None, peer: str = "10.0.0.1"):
+    from starlette.requests import Request
+
+    headers = [(b"x-forwarded-for", forwarded.encode())] if forwarded else []
+    return Request({"type": "http", "headers": headers, "client": (peer, 1234)})
+
+
+def test_forwarded_for_is_ignored_without_a_trusted_proxy(monkeypatch):
+    # Otherwise any client resets its quota by inventing a new address.
+    import lectura.api.server as app_module
+
+    monkeypatch.setattr(app_module, "TRUSTED_PROXIES", 0)
+    assert app_module._client_id(_request("1.2.3.4")) == "10.0.0.1"
+
+
+def test_behind_a_proxy_only_the_proxy_written_hop_counts(monkeypatch):
+    import lectura.api.server as app_module
+
+    monkeypatch.setattr(app_module, "TRUSTED_PROXIES", 1)
+    # The client forged "6.6.6.6"; the proxy appended the real address.
+    assert app_module._client_id(_request("6.6.6.6, 203.0.113.9")) == "203.0.113.9"
+
+
+def test_unreadable_uploads_do_not_use_up_the_quota(monkeypatch):
+    import lectura.api.server as app_module
+
+    monkeypatch.setattr(app_module, "RATE_LIMIT_PER_HOUR", 1)
+    app_module._requests.clear()
+    for _ in range(3):
+        response = client.post(
+            "/api/extract?backend=tesseract",
+            files={"file": ("a.png", b"not an image", "image/png")},
+        )
+        assert response.status_code == 415
+    assert not any(app_module._requests.values())
+    app_module._requests.clear()

@@ -2,15 +2,21 @@
 
 iPhone photos arrive as HEIC with EXIF rotation, so both need handling before
 anything downstream sees pixels.
+
+HEIC is decoded by pillow-heif, registered as a Pillow opener at import. An
+earlier version shelled out to macOS `sips`, which worked on the machine it was
+written on and nowhere else: the Linux container rejected every iPhone photo.
 """
 
 from __future__ import annotations
 
-import subprocess
-import tempfile
+import io
 from pathlib import Path
 
+import pillow_heif
 from PIL import Image, ImageOps
+
+pillow_heif.register_heif_opener()
 
 HEIC_SUFFIXES = {".heic", ".heif"}
 SUPPORTED = HEIC_SUFFIXES | {".jpg", ".jpeg", ".png", ".webp"}
@@ -20,27 +26,9 @@ class UnsupportedImage(ValueError):
     pass
 
 
-def _decode_heic(path: Path) -> Image.Image:
-    """Decode HEIC via macOS `sips`, falling back to pillow-heif if present."""
-    try:
-        import pillow_heif  # type: ignore
-
-        pillow_heif.register_heif_opener()
-        return Image.open(path)
-    except ImportError:
-        pass
-
-    with tempfile.TemporaryDirectory() as td:
-        out = Path(td) / "converted.jpg"
-        result = subprocess.run(
-            ["sips", "-s", "format", "jpeg", str(path), "--out", str(out)],
-            capture_output=True,
-        )
-        if result.returncode != 0 or not out.exists():
-            raise UnsupportedImage(
-                f"cannot decode HEIC {path.name}; install pillow-heif"
-            )
-        return Image.open(out).copy()
+def _normalise(img: Image.Image) -> Image.Image:
+    img = ImageOps.exif_transpose(img)   # honour camera rotation
+    return img.convert("RGB")
 
 
 def load(path: str | Path) -> Image.Image:
@@ -48,10 +36,16 @@ def load(path: str | Path) -> Image.Image:
     path = Path(path)
     if path.suffix.lower() not in SUPPORTED:
         raise UnsupportedImage(f"{path.suffix} not supported")
+    return _normalise(Image.open(path))
 
-    img = _decode_heic(path) if path.suffix.lower() in HEIC_SUFFIXES else Image.open(path)
-    img = ImageOps.exif_transpose(img)   # honour camera rotation
-    return img.convert("RGB")
+
+def decode(payload: bytes) -> Image.Image:
+    """Decode an in-memory upload, HEIC included, to an upright RGB image.
+
+    The format is sniffed from the bytes, not the filename: a browser may send a
+    HEIC photo named `.jpg`, or no useful name at all.
+    """
+    return _normalise(Image.open(io.BytesIO(payload)))
 
 
 def fit_within(img: Image.Image, longest_edge: int) -> Image.Image:

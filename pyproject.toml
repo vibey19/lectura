@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "pillow>=10.0",
+    "pillow-heif>=0.18",
     "pydantic>=2.6",
     "numpy>=1.26",
     "opencv-python-headless>=4.9",
@@ -19,6 +20,7 @@ dev = ["pytest>=8.0", "ruff>=0.5", "httpx>=0.27"]
 
 [project.scripts]
 lectura = "lectura.cli:main"
+lectura-eval = "lectura.evaluate.cli:main"
 
 [build-system]
 requires = ["hatchling"]
