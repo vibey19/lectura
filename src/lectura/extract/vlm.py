@@ -9,6 +9,7 @@ transcription itself was good.
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import json
 import re
@@ -52,12 +53,30 @@ class OllamaVLM(Extractor):
         num_ctx: int = 16384,
         num_predict: int = 4096,
         timeout: int = 900,
+        prompt: str = PROMPT,
+        think: bool | None = None,
     ) -> None:
         self.model = model
         self.host = host.rstrip("/")
         self.num_ctx = num_ctx
         self.num_predict = num_predict
         self.timeout = timeout
+        self.prompt = prompt
+        # Reasoning models spend minutes of output budget thinking before they
+        # transcribe, and can exhaust num_predict before writing any JSON.
+        # None leaves the model's default alone; older models reject the field.
+        self.think = think
+
+    @property
+    def signature(self) -> str:
+        """Identifies everything that changes what the model returns.
+
+        Evaluation caches raw output under this, so editing the prompt cannot
+        silently re-score an old prompt's answers as if they were new ones.
+        """
+        settings = f"{self.prompt}|think={self.think}|predict={self.num_predict}"
+        digest = hashlib.sha1(settings.encode()).hexdigest()[:8]
+        return f"{self.model}-{digest}"
 
     def _post(self, payload: dict) -> dict:
         req = urllib.request.Request(
@@ -73,7 +92,7 @@ class OllamaVLM(Extractor):
         image.save(buf, format="JPEG", quality=92)
         payload = {
             "model": self.model,
-            "prompt": PROMPT,
+            "prompt": self.prompt,
             "images": [base64.b64encode(buf.getvalue()).decode()],
             "stream": False,
             "format": "json",
@@ -104,6 +123,9 @@ class OllamaVLM(Extractor):
                 "num_predict": self.num_predict,
             },
         }
+
+        if self.think is not None:
+            payload["think"] = self.think
 
         started = time.perf_counter()
         try:

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lectura · label</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+  :root { --ink:#1a1714; --muted:#7d746b; --line:#e4ded4; --paper:#fbf9f6; --accent:#8b2635; --bad:#9a5b00; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 -apple-system, system-ui, sans-serif; color:var(--ink); background:var(--paper); }
+  header { display:flex; gap:16px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); }
+  header b { font-size:15px; } header span { color:var(--muted); }
+  main { display:grid; grid-template-columns: 1.1fr 1fr; height: calc(100vh - 49px); }
+  .photo { overflow:auto; background:#2b2926; }
+  .photo img { width:100%; display:block; cursor:zoom-in; }
+  .photo img.zoom { width:200%; cursor:zoom-out; }
+  form { overflow:auto; padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+  label { font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  label small { text-transform:none; letter-spacing:0; font-weight:400; }
+  textarea, input, select { width:100%; font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; background:#fff; }
+  textarea.mono { font-family: ui-monospace, Menlo, monospace; font-size:13px; }
+  .row { display:flex; gap:12px; } .row > div { flex:1; }
+  .preview { border:1px solid var(--line); border-radius:6px; background:#fff; padding:6px 10px; }
+  .preview div { padding:4px 0; border-bottom:1px dashed var(--line); overflow-x:auto; }
+  .preview div:last-child { border-bottom:0; }
+  .preview .err { color:var(--bad); font-family:ui-monospace, Menlo, monospace; font-size:12px; }
+  button { font:inherit; font-weight:600; padding:10px 16px; border:0; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; }
+  button[disabled] { opacity:.5; }
+  .hint { color:var(--muted); font-size:12px; }
+  .empty { padding:40px; }
+</style></head>
+<body>
+<header><b>Reference transcription</b><span id="where"></span><span id="status"></span></header>
+<main id="app">
+  <div class="photo"><img id="img" alt="Page to transcribe"></div>
+  <form id="form">
+    <p class="hint">Write what a careful reader sees on the page. Do not correct the
+    author's mistakes. Continuation lines (<code>= 0</code>) belong to the expression
+    they continue.</p>
+    <div>
+      <label for="text">Prose <small>— in reading order, without the mathematics</small></label>
+      <textarea id="text" rows="7"></textarea>
+    </div>
+    <div>
+      <label for="formulas">Formulas <small>— LaTeX, one expression per line, no $ delimiters</small></label>
+      <textarea id="formulas" class="mono" rows="9" spellcheck="false"></textarea>
+    </div>
+    <div class="preview" id="preview" aria-live="polite"></div>
+    <div class="row">
+      <div><label for="surface">Surface</label><select id="surface"></select></div>
+      <div><label for="licence">Licence</label><input id="licence"></div>
+    </div>
+    <div><label for="note">Note <small>— anything unusual about the page</small></label><input id="note"></div>
+    <div><button id="save" type="submit">Save and next</button> <span class="hint">⌘↵</span></div>
+  </form>
+</main>
+<script>
+const defaults = __DEFAULTS__;
+const $ = (id) => document.getElementById(id);
+let current = null;
+
+for (const s of defaults.surfaces) $("surface").add(new Option(s, s));
+
+function preview() {
+  const box = $("preview"); box.innerHTML = "";
+  for (const line of $("formulas").value.split("\n").map((l) => l.trim()).filter(Boolean)) {
+    const row = document.createElement("div");
+    try { katex.render(line, row, { displayMode: true, throwOnError: true }); }
+    catch (e) { row.className = "err"; row.textContent = "does not parse: " + line; }
+    box.appendChild(row);
+  }
+}
+
+async function next() {
+  const q = await (await fetch("/api/queue")).json();
+  $("status").textContent = `${q.labelled} labelled · ${q.pending.length} to go`;
+  if (!q.pending.length) {
+    $("app").innerHTML = '<p class="empty">Every photo in this folder has a reference. Run <code>lectura-eval</code>.</p>';
+    return;
+  }
+  current = q.pending[0];
+  $("where").textContent = current;
+  $("img").src = `/image/${encodeURIComponent(current)}`;
+  $("img").classList.remove("zoom");
+  for (const id of ["text", "formulas", "note"]) $(id).value = "";
+  $("surface").value = defaults.surface; $("licence").value = defaults.licence;
+  preview(); $("text").focus();
+}
+
+async function save(event) {
+  event.preventDefault();
+  if (!current) return;
+  $("save").disabled = true;
+  const body = {
+    page_id: current, surface: $("surface").value, text: $("text").value,
+    formulas: $("formulas").value.split("\n"), licence: $("licence").value, note: $("note").value,
+  };
+  const response = await fetch("/api/save", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  $("save").disabled = false;
+  if (!response.ok) { $("status").textContent = "save failed: " + (await response.text()); return; }
+  await next();
+}
+
+$("formulas").addEventListener("input", preview);
+$("form").addEventListener("submit", save);
+$("img").addEventListener("click", () => $("img").classList.toggle("zoom"));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(e);
+});
+next();
+</script>
+</body></html>

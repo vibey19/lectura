@@ -174,5 +174,6 @@ def evaluate(
         scores.append(score_page(reference, build_note(raw, source_image=path.name)))
 
     return Report(
-        backend=extractor.name, scores=scores, seconds=total, failures=failures
+        backend=getattr(extractor, "signature", extractor.name),
+        scores=scores, seconds=total, failures=failures,
     )

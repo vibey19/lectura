@@ -26,3 +26,13 @@ licence, so the set is reproducible without redistributing anything.
 Read the image carefully and write the reference by hand. Never paste model
 output in as ground truth; the point of this set is to be independent of any
 model.
+
+`lectura-label` does the bookkeeping. It opens each unlabelled photo in a
+folder beside a form - prose, and one LaTeX expression per line with a live
+preview that marks anything that will not parse - and writes the JSON here.
+It deliberately shows no model output.
+
+```bash
+lectura-label                                  # "handwritten notes/", notebook pages
+lectura-label boards/ --surface board --licence "Public domain"
+```
