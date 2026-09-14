@@ -25,6 +25,7 @@ from lectura.extract.base import (
     RawExtraction,
     RawItem,
 )
+from lectura.extract.markdown import markdown_items
 
 DEFAULT_HOST = "http://localhost:11434"
 
@@ -42,6 +43,8 @@ Return JSON:
 
 Set "certain" to false for anything you are guessing at."""
 
+MARKDOWN_PROMPT = "Text Recognition:"
+
 
 class OllamaVLM(Extractor):
     name = "ollama-vlm"
@@ -53,15 +56,21 @@ class OllamaVLM(Extractor):
         num_ctx: int = 16384,
         num_predict: int = 4096,
         timeout: int = 900,
-        prompt: str = PROMPT,
+        prompt: str | None = None,
         think: bool | None = None,
+        output: str = "json",
     ) -> None:
+        if output not in ("json", "markdown"):
+            raise ValueError("output must be 'json' or 'markdown'")
         self.model = model
         self.host = host.rstrip("/")
         self.num_ctx = num_ctx
         self.num_predict = num_predict
         self.timeout = timeout
-        self.prompt = prompt
+        # "markdown" is for document OCR models such as GLM-OCR, which take a
+        # short task prompt and answer in Markdown with LaTeX, not in JSON.
+        self.output = output
+        self.prompt = prompt or (PROMPT if output == "json" else MARKDOWN_PROMPT)
         # Reasoning models spend minutes of output budget thinking before they
         # transcribe, and can exhaust num_predict before writing any JSON.
         # None leaves the model's default alone; older models reject the field.
@@ -75,6 +84,8 @@ class OllamaVLM(Extractor):
         silently re-score an old prompt's answers as if they were new ones.
         """
         settings = f"{self.prompt}|think={self.think}|predict={self.num_predict}"
+        if self.output != "json":   # appended only when set, so existing keys hold
+            settings += f"|out={self.output}"
         digest = hashlib.sha1(settings.encode()).hexdigest()[:8]
         return f"{self.model}-{digest}"
 
@@ -95,7 +106,6 @@ class OllamaVLM(Extractor):
             "prompt": self.prompt,
             "images": [base64.b64encode(buf.getvalue()).decode()],
             "stream": False,
-            "format": "json",
             "options": {
                 # Greedy decoding, deliberately: the evaluation harness depends
                 # on extraction being reproducible.
@@ -124,6 +134,8 @@ class OllamaVLM(Extractor):
             },
         }
 
+        if self.output == "json":
+            payload["format"] = "json"
         if self.think is not None:
             payload["think"] = self.think
 
@@ -138,6 +150,13 @@ class OllamaVLM(Extractor):
 
         # Ollama reports "length" when the model was cut off mid-answer.
         truncated = body.get("done_reason") == "length"
+        if self.output == "markdown":
+            items = list(markdown_items(body.get("response", "")))
+            if not items:
+                raise ExtractionError("the model returned no readable text for this image")
+            return RawExtraction(items=items, backend=f"{self.name}:{self.model}",
+                                 seconds=round(elapsed, 1), truncated=truncated)
+
         parsed, salvaged = _parse(body.get("response", ""))
         items = [
             RawItem(

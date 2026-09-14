@@ -20,14 +20,14 @@ from lectura.evaluate.dataset import DEFAULT_ROOT, load_all, missing_images
 from lectura.evaluate.runner import evaluate
 
 
-def _extractor(backend: str, model: str, no_think: bool):
+def _extractor(backend: str, model: str, no_think: bool, output: str):
     from lectura.extract import OllamaVLM, Pix2TextOCR, Tesseract
 
     if backend == "tesseract":
         return Tesseract()
     if backend == "pix2text":
         return Pix2TextOCR()
-    return OllamaVLM(model=model, think=False if no_think else None)
+    return OllamaVLM(model=model, think=False if no_think else None, output=output)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -39,6 +39,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-m", "--model", default="qwen2.5vl:7b")
     parser.add_argument("--no-think", action="store_true",
                         help="disable reasoning on models that think by default")
+    parser.add_argument("--output", default="json", choices=["json", "markdown"],
+                        help="markdown for document OCR models such as glm-ocr")
     parser.add_argument("--max-edge", type=int, default=2200)
     parser.add_argument("--no-preprocess", action="store_true")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
@@ -60,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     for reference in missing_images(references):
         print(f"skipping {reference.page_id}: image not present ({reference.source})")
 
-    extractor = _extractor(args.backend, args.model, args.no_think)
+    extractor = _extractor(args.backend, args.model, args.no_think, args.output)
     signature = getattr(extractor, "signature", None)
     name = f"{args.backend}-{signature}" if signature else args.backend
     key = f"{name}-{args.max_edge}-{'raw' if args.no_preprocess else 'pre'}"

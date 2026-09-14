@@ -12,14 +12,12 @@ Runtime, whose CoreML provider fails to build an execution plan on Apple silicon
 
 from __future__ import annotations
 
-import re
 import time
 
 from PIL import Image
 
-from lectura.extract.base import Extractor, RawExtraction, RawItem
-
-_DISPLAY_MATH = re.compile(r"\$\$(.+?)\$\$", re.DOTALL)
+from lectura.extract.base import Extractor, RawExtraction
+from lectura.extract.markdown import markdown_items
 
 
 class Pix2TextOCR(Extractor):
@@ -43,26 +41,7 @@ class Pix2TextOCR(Extractor):
         elapsed = time.perf_counter() - started
 
         return RawExtraction(
-            items=list(_parse(str(output))),
+            items=list(markdown_items(str(output))),
             backend=self.name,
             seconds=round(elapsed, 1),
         )
-
-
-def _parse(text: str):
-    """Split Pix2Text's markdown into maths and prose, preserving order."""
-    position = 0
-    for match in _DISPLAY_MATH.finditer(text):
-        yield from _prose(text[position : match.start()])
-        expression = match.group(1).strip()
-        if expression:
-            yield RawItem(text=f"${expression}$", hint="math")
-        position = match.end()
-    yield from _prose(text[position:])
-
-
-def _prose(chunk: str):
-    for line in chunk.splitlines():
-        line = line.strip()
-        if line:
-            yield RawItem(text=line, hint="body")
