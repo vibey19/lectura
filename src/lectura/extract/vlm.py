@@ -43,6 +43,21 @@ Return JSON:
 
 Set "certain" to false for anything you are guessing at."""
 
+# On pages of simple notation the model wrote no LaTeX at all - "w1 * x + b1"
+# for w_1 \\cdot x + b_1, "1 / (1 + e^-x)" for a fraction - while reading the
+# values correctly. v2 adds one instruction aimed at exactly that, so a measured
+# difference can be attributed to it.
+PROMPT_V2 = PROMPT.replace(
+    'Set "certain" to false',
+    # The examples are deliberately absent from every labelled page: quoting a
+    # page's own expressions here would leak the test set into the prompt.
+    "Write ALL mathematics as LaTeX inside $...$, including simple expressions "
+    "such as $k_3 = 7$, $n = 5$ or $\\frac{3}{4}$: use subscripts, \\cdot and "
+    "\\frac rather than plain-text forms like k3, * or 3/4.\n\n"
+    'Set "certain" to false',
+)
+PROMPTS = {"v1": PROMPT, "v2": PROMPT_V2}
+
 MARKDOWN_PROMPT = "Text Recognition:"
 
 

@@ -20,14 +20,21 @@ from lectura.evaluate.dataset import DEFAULT_ROOT, load_all, missing_images
 from lectura.evaluate.runner import evaluate
 
 
-def _extractor(backend: str, model: str, no_think: bool, output: str):
+def _extractor(backend: str, model: str, no_think: bool, output: str, prompt: str):
     from lectura.extract import OllamaVLM, Pix2TextOCR, Tesseract
 
     if backend == "tesseract":
         return Tesseract()
     if backend == "pix2text":
         return Pix2TextOCR()
-    return OllamaVLM(model=model, think=False if no_think else None, output=output)
+    from lectura.extract.vlm import PROMPTS
+
+    return OllamaVLM(
+        model=model,
+        think=False if no_think else None,
+        output=output,
+        prompt=PROMPTS[prompt] if output == "json" else None,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -39,6 +46,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-m", "--model", default="qwen2.5vl:7b")
     parser.add_argument("--no-think", action="store_true",
                         help="disable reasoning on models that think by default")
+    parser.add_argument("--prompt", default="v1", choices=["v1", "v2"],
+                        help="JSON transcription prompt version (see extract/vlm.py)")
     parser.add_argument("--output", default="json", choices=["json", "markdown"],
                         help="markdown for document OCR models such as glm-ocr")
     parser.add_argument("--max-edge", type=int, default=2200)
@@ -62,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     for reference in missing_images(references):
         print(f"skipping {reference.page_id}: image not present ({reference.source})")
 
-    extractor = _extractor(args.backend, args.model, args.no_think, args.output)
+    extractor = _extractor(args.backend, args.model, args.no_think, args.output, args.prompt)
     signature = getattr(extractor, "signature", None)
     name = f"{args.backend}-{signature}" if signature else args.backend
     key = f"{name}-{args.max_edge}-{'raw' if args.no_preprocess else 'pre'}"
