@@ -81,3 +81,33 @@ def test_salvage_keeps_a_genuine_short_repeat():
     )
     parsed, _ = _parse(raw)
     assert [line["text"] for line in parsed["lines"]] == ["= 0", "= 0", "done"]
+
+
+def _items(*texts):
+    from lectura.extract.base import RawItem
+
+    return [RawItem(text=t) for t in texts]
+
+
+def test_a_whole_page_written_twice_is_kept_once():
+    # GLM-OCR transcribed a page correctly, then wrote all of it out again.
+    from lectura.extract.base import collapse_repeated_blocks
+
+    page = ["TASK-1", "Given:", "$x = 1$", "$t = 1$"]
+    assert [i.text for i in collapse_repeated_blocks(_items(*page, *page))] == page
+
+
+def test_a_repeated_run_after_a_different_first_line_is_collapsed():
+    from lectura.extract.base import collapse_repeated_blocks
+
+    run = ["$= 0.25$", "$= x$", "$= 1$"]
+    texts = [i.text for i in collapse_repeated_blocks(_items("head", *run, *run, "tail"))]
+    assert texts == ["head", *run, "tail"]
+
+
+def test_short_genuine_repeats_survive():
+    # Notes legitimately repeat a line, or a pair such as "= 1" / "= 1".
+    from lectura.extract.base import collapse_repeated_blocks
+
+    texts = ["a", "= 1", "b", "= 1", "b", "c"]
+    assert [i.text for i in collapse_repeated_blocks(_items(*texts))] == texts

@@ -18,7 +18,12 @@ from lectura.evaluate.metrics import (
     latex_stream_distance,
     word_error_rate,
 )
-from lectura.extract.base import ExtractionError, Extractor, RawExtraction
+from lectura.extract.base import (
+    ExtractionError,
+    Extractor,
+    RawExtraction,
+    collapse_repeated_blocks,
+)
 from lectura.preprocess import preprocess
 from lectura.schema import BlockType, Note
 from lectura.structure import build_note
@@ -120,6 +125,8 @@ def evaluate(
     use_preprocess: bool = True,
     root: Path = Path("data/eval"),
     cache: Path | None = None,
+    cached_only: bool = False,
+    surfaces: set[str] | None = None,
 ) -> Report:
     """Score `extractor` over the labelled set.
 
@@ -136,12 +143,16 @@ def evaluate(
     total = 0.0
 
     for reference in references:
+        if surfaces and reference.surface not in surfaces:
+            continue
         path = Path(reference.source)
         cached_path = cache / f"{reference.page_id}.json" if cache else None
         cached = _read_cached(cached_path)
 
         if cached is None:
-            if not path.exists():
+            # Re-scoring must never quietly start a model pass on a page the
+            # cache has not seen.
+            if cached_only or not path.exists():
                 continue
             image = ingest.load(path)
             if use_preprocess:
@@ -170,6 +181,9 @@ def evaluate(
             )
             continue
 
+        # Cached extractions predate later post-processing; apply it on read so
+        # a re-score measures the current pipeline, not the one that cached it.
+        raw.items = collapse_repeated_blocks(raw.items)
         total += raw.seconds
         scores.append(score_page(reference, build_note(raw, source_image=path.name)))
 

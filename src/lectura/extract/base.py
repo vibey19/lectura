@@ -80,6 +80,30 @@ class RawExtraction:
         )
 
 
+def collapse_repeated_blocks(items: list[RawItem], min_block: int = 3) -> list[RawItem]:
+    """Drop a run of lines that immediately repeats the run before it.
+
+    Models loop at more than one scale. Qwen repeats a single token; GLM-OCR
+    transcribed one page correctly and then wrote the whole page out again, and
+    on another page re-emitted seventeen consecutive lines. The doubled note
+    scores as badly as a wrong one - every formula is counted twice - and reads
+    badly too. Real notes do repeat a line, and occasionally a pair, so only
+    blocks of `min_block` or more lines are treated as a loop.
+    """
+    texts = [item.text for item in items]
+    index = 0
+    while index < len(texts):
+        longest = (len(texts) - index) // 2
+        for size in range(longest, min_block - 1, -1):
+            if texts[index : index + size] == texts[index + size : index + 2 * size]:
+                del texts[index + size : index + 2 * size]
+                del items[index + size : index + 2 * size]
+                break
+        else:
+            index += 1
+    return items
+
+
 class Extractor(Protocol):
     name: str
 

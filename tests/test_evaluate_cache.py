@@ -48,3 +48,11 @@ def test_a_cached_failure_is_still_scored_as_a_failure(tmp_path):
     report = evaluate(Counting(), [reference], use_preprocess=False, cache=cache)
     assert report.failures == ["p1"]
     assert report.scores[0].formula_stream_distance == 1.0
+
+
+def test_cached_only_never_calls_the_model(tmp_path):
+    reference = _reference(tmp_path)
+    extractor = Counting()
+    report = evaluate(extractor, [reference], use_preprocess=False,
+                      cache=tmp_path / "empty", cached_only=True)
+    assert extractor.calls == 0 and report.scores == []

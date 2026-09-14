@@ -24,6 +24,7 @@ from lectura.extract.base import (
     Extractor,
     RawExtraction,
     RawItem,
+    collapse_repeated_blocks,
 )
 from lectura.extract.markdown import markdown_items
 
@@ -166,7 +167,7 @@ class OllamaVLM(Extractor):
         # Ollama reports "length" when the model was cut off mid-answer.
         truncated = body.get("done_reason") == "length"
         if self.output == "markdown":
-            items = list(markdown_items(body.get("response", "")))
+            items = collapse_repeated_blocks(list(markdown_items(body.get("response", ""))))
             if not items:
                 raise ExtractionError("the model returned no readable text for this image")
             return RawExtraction(items=items, backend=f"{self.name}:{self.model}",
@@ -185,6 +186,7 @@ class OllamaVLM(Extractor):
             for line in parsed.get("lines", [])
             if line.get("text")
         ]
+        items = collapse_repeated_blocks(items)
         if not items:
             raise ExtractionError(
                 "the model returned no readable text for this image"

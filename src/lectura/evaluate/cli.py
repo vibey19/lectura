@@ -56,6 +56,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cache", type=Path, default=Path("results/raw"),
                         help="raw extraction cache root (default: results/raw)")
     parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--cached-only", action="store_true",
+                        help="score cached extractions only; never call a model")
+    parser.add_argument("--surface", action="append", choices=["notebook", "board", "slide"],
+                        help="restrict to one surface (repeatable)")
     parser.add_argument("--refresh", action="store_true",
                         help="discard this configuration's cache before running")
     return parser
@@ -85,6 +89,8 @@ def main(argv: list[str] | None = None) -> int:
         max_edge=args.max_edge,
         use_preprocess=not args.no_preprocess,
         cache=cache,
+        cached_only=args.cached_only,
+        surfaces=set(args.surface) if args.surface else None,
     )
 
     print(f"{'page':<12}{'CER':>8}{'WER':>8}{'stream':>9}{'exact':>8}")
