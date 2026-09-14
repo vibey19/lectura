@@ -21,7 +21,8 @@ def _setup(tmp_path):
 
 def test_queue_lists_only_unlabelled_images(tmp_path):
     client, _ = _setup(tmp_path)
-    assert client.get("/api/queue").json() == {"pending": ["a", "b"], "labelled": 0}
+    body = client.get("/api/queue").json()
+    assert body["pending"] == ["a", "b"] and body["labelled"] == 0
 
 
 def test_saving_writes_a_reference_and_advances_the_queue(tmp_path):
@@ -51,3 +52,14 @@ def test_unknown_surface_is_rejected(tmp_path):
         "page_id": "a", "surface": "napkin", "text": "", "formulas": [], "licence": "",
     })
     assert response.status_code == 400
+
+
+def test_provenance_is_prefilled_from_sources_json(tmp_path):
+    photos = tmp_path / "photos"
+    photos.mkdir()
+    Image.new("RGB", (60, 40), "white").save(photos / "fermi.jpg")
+    (photos / "sources.json").write_text(json.dumps({"fermi": {
+        "licence": "Public domain", "credit": "Smithsonian", "url": "https://example.org/f"}}))
+    client = TestClient(create_app(photos, tmp_path / "eval", "board", "personal"))
+    assert client.get("/api/queue").json()["next"] == {
+        "licence": "Public domain", "note": "Smithsonian, https://example.org/f"}

@@ -83,7 +83,8 @@ async function next() {
   $("img").src = `/image/${encodeURIComponent(current)}`;
   $("img").classList.remove("zoom");
   for (const id of ["text", "formulas", "note"]) $(id).value = "";
-  $("surface").value = defaults.surface; $("licence").value = defaults.licence;
+  $("surface").value = defaults.surface;
+  $("licence").value = q.next.licence; $("note").value = q.next.note;
   preview(); $("text").focus();
 }
 

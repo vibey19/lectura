@@ -1,7 +1,10 @@
 """`lectura-label`: write reference transcriptions for the evaluation set.
 
     lectura-label                           # photos in "handwritten notes/"
-    lectura-label path/to/boards --surface board --licence "Public domain"
+    lectura-label data/eval/images/boards --surface board
+
+A `sources.json` in the folder, mapping each photo's name to its licence,
+credit and URL, pre-fills those fields so provenance is recorded per page.
 
 Opens a local page showing one unlabelled photo beside a form: prose in reading
 order, and one LaTeX expression per line with a live preview. Saving writes
@@ -52,6 +55,13 @@ def _images(folder: Path) -> dict[str, Path]:
 def create_app(folder: Path, root: Path, surface: str, licence: str) -> FastAPI:
     app = FastAPI(title="lectura-label")
     images = _images(folder)
+    sources_file = folder / "sources.json"
+    sources = json.loads(sources_file.read_text()) if sources_file.exists() else {}
+
+    def defaults_for(page_id: str) -> dict:
+        source = sources.get(page_id, {})
+        credit = ", ".join(p for p in (source.get("credit"), source.get("url")) if p)
+        return {"licence": source.get("licence", licence), "note": credit}
 
     def queue() -> list[str]:
         done = {reference.page_id for reference in load_all(root)}
@@ -65,7 +75,12 @@ def create_app(folder: Path, root: Path, surface: str, licence: str) -> FastAPI:
 
     @app.get("/api/queue")
     def pending() -> dict:
-        return {"pending": queue(), "labelled": len(images) - len(queue())}
+        pending = queue()
+        return {
+            "pending": pending,
+            "labelled": len(images) - len(pending),
+            "next": defaults_for(pending[0]) if pending else None,
+        }
 
     @app.get("/image/{page_id}")
     def image(page_id: str) -> Response:
