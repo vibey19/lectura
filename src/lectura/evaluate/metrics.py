@@ -74,6 +74,16 @@ _LATEX_SPACING = re.compile(
 )
 _LATEX_SIZING = re.compile(r"\\(?:left|right|big|Big|bigg|Bigg)\s*")
 _LATEX_TOKEN = re.compile(r"\\[a-zA-Z]+|\\.|[a-zA-Z0-9]|[^\s]")
+# Alignment environments only lay out a derivation: where the rows break and
+# which relation they line up on. Matrices are deliberately not included - their
+# & and \\ separate entries, and a transposed row is a real error.
+_ALIGNMENT = re.compile(
+    r"\\begin\{(aligned|align\*?|split|gathered)\}(.*?)\\end\{\1\}", re.DOTALL
+)
+
+
+def _unwrap_alignment(match: re.Match[str]) -> str:
+    return re.sub(r"\\\\|&", " ", match.group(2))
 
 
 def normalise_latex(latex: str) -> str:
@@ -91,6 +101,7 @@ def normalise_latex(latex: str) -> str:
         latex = latex[2:-2]
     if latex.startswith(r"\[") and latex.endswith(r"\]"):
         latex = latex[2:-2]
+    latex = _ALIGNMENT.sub(_unwrap_alignment, latex)
     latex = _LATEX_SPACING.sub("", latex)
     latex = _LATEX_SIZING.sub("", latex)
     latex = re.sub(r"\s+", "", latex)

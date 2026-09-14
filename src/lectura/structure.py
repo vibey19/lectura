@@ -16,10 +16,16 @@ from lectura.schema import Block, BlockType, Flag, Note
 
 # A line is mathematical if it is mostly notation rather than prose.
 _MATH_DELIM = re.compile(r"\$(.+?)\$|\\\((.+?)\\\)|\\\[(.+?)\\\]", re.DOTALL)
-_MATH_CMD = re.compile(
-    r"\\(frac|sqrt|sum|int|beta|alpha|mu|sigma|begin"
-    r"|partial|cdot|times|vec|mathbb|hat)"
-)
+# Any LaTeX command except the few that wrap prose. An allow-list of a dozen
+# names missed \lim, \infty, \Delta, \le and most of the rest of mathematics.
+_MATH_CMD = re.compile(r"\\(?!(?:text|textbf|textit|emph|mathrm)\b)[a-zA-Z]+")
+# Subscripts and superscripts: x_1, x_{i,1}, e^{-x}, \mu_i^2.
+_SCRIPT = re.compile(r"[A-Za-z0-9)}\]][_^][{A-Za-z0-9(\\-]")
+# A derivation step: the line continues the expression above it. Implication
+# arrows are not steps - on real pages "\Rightarrow" opens the next statement,
+# and treating it as a continuation fused three derivations into one.
+_CONTINUATION = re.compile(r"^\s*(=|\\approx)")
+_ALIGNED = re.compile(r"^\\begin\{aligned\}(.*)\\end\{aligned\}$", re.DOTALL)
 _BULLET = re.compile(r"^\s*[-*•‣●◦>→]\s+(.*)")
 _NUMBERED = re.compile(r"^\s*(\d+)[.)]\s+(.*)")
 _HEADING_HASH = re.compile(r"^\s*(#+)\s*(.*)")
@@ -44,10 +50,13 @@ def _is_math(text: str) -> bool:
         return False
     if _MATH_DELIM.fullmatch(stripped):
         return True
+    prose = re.findall(r"[A-Za-z]{4,}", _MATH_CMD.sub("", _MATH_DELIM.sub(" ", stripped)))
     if _MATH_CMD.search(stripped):
         # Prose mentioning one symbol is not an equation; notation-dense is.
-        words = re.findall(r"[A-Za-z]{4,}", re.sub(_MATH_CMD, "", stripped))
-        return len(words) <= 3
+        return len(prose) <= 3
+    if _SCRIPT.search(stripped):
+        # Stricter than commands: identifiers such as file_name also match.
+        return len(prose) <= 1
     # Bare arithmetic such as "2x - y = 0"
     if "=" in stripped and len(stripped) < 60:
         letters = sum(c.isalpha() for c in stripped)
@@ -128,8 +137,17 @@ def build_note(
             blocks.append(_block(BlockType.HEADING, content, item, source_image,
                                  low_confidence, level=level))
         elif _is_math(text) or item.hint == "math":
-            blocks.append(_block(BlockType.EQUATION, _strip_math_delims(text), item,
-                                 source_image, low_confidence))
+            content = _strip_math_delims(text)
+            previous = blocks[-1] if blocks else None
+            if (
+                previous is not None
+                and previous.type is BlockType.EQUATION
+                and _CONTINUATION.match(content)
+            ):
+                blocks[-1] = _continue_equation(previous, content, item, low_confidence)
+            else:
+                blocks.append(_block(BlockType.EQUATION, content, item,
+                                     source_image, low_confidence))
         else:
             blocks.append(_block(BlockType.TEXT, text, item, source_image, low_confidence))
 
@@ -163,6 +181,53 @@ def _clean_title(candidate: str | None) -> str | None:
     if letters < 3 or letters < len(title) / 3:
         return None
     return title
+
+
+def _first_top_level_equals(latex: str) -> int:
+    """Index of the first '=' outside braces, or -1.
+
+    An alignment marker inside a group - the '=' of \\sum_{i=1} - does not
+    parse, so only the relation at the top level can carry it.
+    """
+    depth = 0
+    for index, character in enumerate(latex):
+        if character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+        elif character == "=" and depth == 0:
+            return index
+    return -1
+
+
+def _continue_equation(
+    previous: Block, continuation: str, item: RawItem, threshold: float
+) -> Block:
+    """Fold a derivation step into the equation it continues.
+
+    Handwritten working puts each step on its own line - "y = w x + b",
+    "= 4 * 0.5 + 0", "= 2" - and a reader parses the column as one statement.
+    Kept as separate blocks, the steps read as three unrelated equations, two of
+    which start with a dangling '='. They are joined into one aligned
+    derivation, so the steps still line up on their relation.
+    """
+    match = _ALIGNED.match(previous.content)
+    if match:
+        rows = match.group(1).strip()
+    else:
+        head = previous.content
+        split = _first_top_level_equals(head)
+        rows = f"{head[:split]}&{head[split:]}" if split >= 0 else f"&{head}"
+
+    content = f"\\begin{{aligned}} {rows} \\\\ &{continuation.strip()} \\end{{aligned}}"
+
+    confidences = [c for c in (previous.confidence, item.confidence) if c is not None]
+    confidence = min(confidences) if confidences else None
+    return previous.model_copy(update={
+        "content": content,
+        "confidence": confidence,
+        "flags": _flags_for(confidence, content, threshold),
+    })
 
 
 def _item_text(item: RawItem, block_type: BlockType) -> str:

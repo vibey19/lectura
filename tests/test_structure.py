@@ -115,3 +115,46 @@ def test_a_real_title_survives():
     note = build_note(RawExtraction(items=[RawItem(text="body")],
                                     title_hint="# Reactor classification"))
     assert note.title == "Reactor classification"
+
+
+def test_notation_outside_a_short_allow_list_is_still_mathematics():
+    # Without a type hint from the backend, these were typed as prose.
+    for line in ("x_1 + x_2 + x_3", r"\lim_{n \to \infty} a_n", r"\Delta E \le 0"):
+        assert note_from(line).blocks[0].type is BlockType.EQUATION, line
+
+
+def test_identifiers_with_underscores_in_prose_stay_prose():
+    assert note_from("the file_name variable is set here").blocks[0].type is BlockType.TEXT
+
+
+def test_derivation_steps_join_the_equation_they_continue():
+    # A real page: each step on its own line, read as one statement.
+    note = note_from("y = w_2 h + b_2", r"= 4 \cdot 0.5 + 0", "= 2", hint="math")
+    assert len(note.blocks) == 1
+    content = note.blocks[0].content
+    assert content.startswith(r"\begin{aligned}") and content.endswith(r"\end{aligned}")
+    assert content.count("&=") == 3
+
+
+def test_alignment_never_lands_inside_a_group():
+    note = note_from(r"\sum_{i=1}^n x_i = 5", "= 6", hint="math")
+    assert r"\sum_{i=1}^n x_i &= 5" in note.blocks[0].content
+
+
+def test_an_implication_arrow_starts_a_new_statement():
+    # Treating \Rightarrow as a continuation fused three derivations on a real
+    # page into one block and cost an exact formula match.
+    note = note_from(r"\sigma' = \sigma(1-\sigma)", r"\Rightarrow h' = 0.25", hint="math")
+    assert len(note.blocks) == 2
+
+
+def test_a_continuation_after_prose_is_not_merged_into_it():
+    note = note_from("Pre-activation: compute the weighted sum", "= 0")
+    assert [b.type for b in note.blocks] == [BlockType.TEXT, BlockType.EQUATION]
+
+
+def test_a_merged_step_carries_its_doubt():
+    items = [RawItem(text="y = 2", confidence=0.9), RawItem(text="= 3", confidence=0.4)]
+    block = build_note(RawExtraction(items=items)).blocks[0]
+    assert block.confidence == 0.4
+    assert Flag.LOW_CONFIDENCE in block.flags
