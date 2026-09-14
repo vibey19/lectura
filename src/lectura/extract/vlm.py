@@ -48,6 +48,13 @@ Set "certain" to false for anything you are guessing at."""
 # for w_1 \\cdot x + b_1, "1 / (1 + e^-x)" for a fraction - while reading the
 # values correctly. v2 adds one instruction aimed at exactly that, so a measured
 # difference can be attributed to it.
+#
+# Measured, it made things worse, and is kept only so that stays reproducible.
+# On the four notebook pages formula error rose from 0.159 to 0.288 for
+# Qwen2.5-VL and from 0.148 to 0.386 for Qwen3.5 4B, and the page it targeted got
+# worse too. Told to write all mathematics as LaTeX, the model also wrapped
+# arrows and labels such as "=> Given:" in maths, adding formulas the page does
+# not have. A model that writes LaTeX natively (GLM-OCR) fixed the same page.
 PROMPT_V2 = PROMPT.replace(
     'Set "certain" to false',
     # The examples are deliberately absent from every labelled page: quoting a
