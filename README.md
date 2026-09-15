@@ -7,7 +7,7 @@ editable study notes with every equation typeset.
 through a [Hugging Face Space](https://huggingface.co/spaces/Jainil19/lectura) ·
 no sign-up, nothing stored
 
-![A blackboard photograph read into typeset equations](docs/demo.png)
+![Lectura reading a blackboard photograph into editable, typeset notes](docs/demo.gif)
 
 ## What it does
 
