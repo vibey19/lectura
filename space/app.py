@@ -31,10 +31,17 @@ processor, model = load(
     dtype=os.getenv("LECTURA_DTYPE") or None,
     attention=os.getenv("LECTURA_ATTENTION") or None,
 )
-_generate = make_generate(processor, model)
+# Output is capped so that even a model stuck in a loop finishes inside the GPU
+# reservation below. Measured on this Space at roughly 300 tokens a second, 2560
+# tokens is about nine seconds - room for a full page written out twice, which
+# GLM-OCR does, so the repeat is complete and can be collapsed.
+_generate = make_generate(processor, model, max_new_tokens=2560)
 
 
-@spaces.GPU(duration=120)
+# ZeroGPU charges each visitor's small daily allowance for the full reservation
+# up front, not for the time used. A 120-second reservation turned visitors away
+# after a couple of reads that each took under ten seconds.
+@spaces.GPU(duration=40)
 def generate_on_gpu(image):
     return _generate(image)
 

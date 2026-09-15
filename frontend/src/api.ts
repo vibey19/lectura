@@ -95,7 +95,14 @@ export async function extract(
     } catch (error) {
       // Gradio reports gr.Error messages - "Choose a photo first", a model
       // failure, an exhausted GPU quota - as the error's message.
-      const message = (error as { message?: string })?.message;
+      const message = (error as { message?: string })?.message ?? "";
+      if (/quota/i.test(message)) {
+        throw new ApiError(
+          "The free GPU allowance for your connection is used up for now. " +
+            "Open a finished example below, or try again later.",
+          429,
+        );
+      }
       throw new ApiError(message || "The reading service could not be reached.", 503);
     }
     // The client cannot cancel a queued job, so a cancelled read is dropped here.
