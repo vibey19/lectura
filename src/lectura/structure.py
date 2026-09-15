@@ -70,6 +70,10 @@ def _looks_like_heading(text: str, hint: str | None) -> bool:
         return True
     if hint == "heading":
         return True
+    # Shouting is a heading only when it is prose: "$P(A|B) = 1$" and "E = MC^2"
+    # are all capitals too.
+    if _MATH_DELIM.search(stripped) or _is_math(stripped):
+        return False
     if len(stripped) <= 48 and stripped.isupper() and any(c.isalpha() for c in stripped):
         return True
     return False

@@ -158,3 +158,9 @@ def test_a_merged_step_carries_its_doubt():
     block = build_note(RawExtraction(items=items)).blocks[0]
     assert block.confidence == 0.4
     assert Flag.LOW_CONFIDENCE in block.flags
+
+
+def test_formulas_in_capitals_are_not_headings():
+    for line in ("$P(A|B) = 1$", "E = MC^2"):
+        assert note_from(line).blocks[0].type is BlockType.EQUATION, line
+    assert note_from("MODELING LOOP").blocks[0].type is BlockType.HEADING
