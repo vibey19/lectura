@@ -29,8 +29,20 @@ MODEL_ID = "zai-org/GLM-OCR"
 PROMPT = "Text Recognition:"
 
 
-def load(model_id: str = MODEL_ID, device: str | None = None):
-    """Load processor and model. Imported lazily: torch is not a core dependency."""
+def load(
+    model_id: str = MODEL_ID,
+    device: str | None = None,
+    dtype: str | None = None,
+    attention: str | None = None,
+):
+    """Load processor and model. Imported lazily: torch is not a core dependency.
+
+    `dtype` and `attention` are exposed so the hosted demo can be checked
+    against the benchmark. Scored on the notebook pages, the Space in float32
+    matched the Ollama build that was measured (formula error 0.123 against
+    0.124) while individual symbols still differ now and then - it read one
+    board's h-bar as pi where Ollama did not.
+    """
     import torch
     from transformers import AutoProcessor, GlmOcrForConditionalGeneration
 
@@ -40,9 +52,12 @@ def load(model_id: str = MODEL_ID, device: str | None = None):
             else "mps" if torch.backends.mps.is_available()
             else "cpu"
         )
+    if dtype is None:
+        dtype = "bfloat16" if device != "cpu" else "float32"
     processor = AutoProcessor.from_pretrained(model_id)
+    extra = {"attn_implementation": attention} if attention else {}
     model = GlmOcrForConditionalGeneration.from_pretrained(
-        model_id, dtype=torch.bfloat16 if device != "cpu" else torch.float32
+        model_id, dtype=getattr(torch, dtype), **extra
     ).to(device)
     model.eval()
     return processor, model

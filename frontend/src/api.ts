@@ -80,7 +80,9 @@ export async function extract(
     signal?: AbortSignal;
   } = {},
 ): Promise<ExtractResponse> {
-  const { backend = "vlm", maxEdge = 2200, preprocess = true, signal } = options;
+  // Preprocessing is off by default: with GLM-OCR it measured worse than the
+  // raw photo (formula error 0.144 against 0.123 on the notebook pages).
+  const { backend = "vlm", maxEdge = 2200, preprocess = false, signal } = options;
 
   if (HF_SPACE) {
     let result: { data: unknown };
