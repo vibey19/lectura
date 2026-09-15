@@ -461,8 +461,8 @@ function Skeleton({ elapsed, onCancel }: { elapsed: number; onCancel: () => void
       <div className="sk sk-eq" />
       <div className="sk sk-line" style={{ width: "70%" }} />
       <p className="skeleton-note">
-        Reading the page — {elapsed}s elapsed. A full-resolution photo usually
-        takes about a minute.
+        Reading the page — {elapsed}s elapsed. The first read after a quiet spell
+        also wakes the GPU, which can add half a minute.
         <button className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
       </p>
     </div>

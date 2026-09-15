@@ -8,8 +8,6 @@ session store and nothing to deploy beyond the process itself.
 
 from __future__ import annotations
 
-import base64
-import io
 import os
 import threading
 import time
@@ -20,15 +18,14 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from PIL import Image, UnidentifiedImageError
+from PIL import UnidentifiedImageError
 from pydantic import BaseModel
 
 from lectura import ingest
 from lectura.extract import ExtractionError, OllamaVLM, Pix2TextOCR, Tesseract
-from lectura.preprocess import preprocess
+from lectura.pipeline import ExtractResult, read_image
 from lectura.render import available_themes, render
 from lectura.schema import Note
-from lectura.structure import build_note
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 STATIC_DIR = Path(__file__).parent / "static"
@@ -110,22 +107,7 @@ def _rate_limit(request: Request) -> None:
         _requests[client] = recent
 
 
-class ExtractResponse(BaseModel):
-    note: Note
-    seconds: float
-    backend: str
-    preprocess: str
-    truncated: bool = False
-    """The model was cut off mid-answer and this note is partial."""
-
-    preview: str = ""
-    """Data URL of the image the model actually read.
-
-    Returned rather than letting the browser display the upload directly:
-    browsers cannot decode HEIC, which is what most phone photos arrive as, and
-    a preview of the corrected image is the more useful comparison anyway - it
-    shows what the model saw, not what the camera produced.
-    """
+ExtractResponse = ExtractResult   # the HTTP shape is the pipeline's result
 
 
 class RenderRequest(BaseModel):
@@ -171,37 +153,19 @@ def extract(
     # should not cost the user one of their extractions.
     _rate_limit(request)
 
-    steps = "skipped"
-    if use_preprocess:
-        result = preprocess(image)
-        image, steps = result.image, result.summary()
-    image = ingest.fit_within(image, max_edge)
-
     try:
-        raw = BACKENDS[backend]().extract(image)
+        return read_image(
+            image,
+            BACKENDS[backend](),
+            use_preprocess=use_preprocess,
+            max_edge=max_edge,
+            source_name=file.filename,
+        )
     except ExtractionError as exc:
         # A readable reason, not a blank page: the user waited minutes for this.
         raise HTTPException(422, str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
-
-    note = build_note(raw, source_image=file.filename)
-    return ExtractResponse(
-        note=note,
-        seconds=raw.seconds,
-        backend=raw.backend,
-        preprocess=steps,
-        truncated=raw.truncated,
-        preview=_preview_data_url(image),
-    )
-
-
-def _preview_data_url(image: Image.Image, longest_edge: int = 1100) -> str:
-    thumbnail = ingest.fit_within(image, longest_edge)
-    buffer = io.BytesIO()
-    thumbnail.save(buffer, format="JPEG", quality=78, optimize=True)
-    encoded = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/jpeg;base64,{encoded}"
 
 
 @app.post("/api/render", response_class=HTMLResponse)
