@@ -66,7 +66,8 @@ const SYMBOLS: Record<string, string> = {
   leq: "≤", geq: "≥", neq: "≠", approx: "≈", equiv: "≡", propto: "∝",
   in: "∈", subset: "⊂", cup: "∪", cap: "∩", forall: "∀", exists: "∃",
   rightarrow: "→", leftarrow: "←", leftrightarrow: "↔", Rightarrow: "⇒",
-  to: "→", mapsto: "↦", ell: "ℓ", hbar: "ℏ",
+  to: "→", mapsto: "↦", ell: "ℓ", hbar: "ℏ", longrightarrow: "⟶", longleftarrow: "⟵",
+  longleftrightarrow: "⟷", Longrightarrow: "⟹", implies: "⟹", iff: "⟺",
 };
 
 /** Commands that only affect layout. Their names are noise in a label. */

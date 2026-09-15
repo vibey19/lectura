@@ -162,6 +162,56 @@ gets written the way one would type it. That is a prompting and model-choice
 problem, not a structuring one, and it is the first thing to test on any
 replacement model.
 
+## Choosing the deployed model
+
+The comparison above made the case for a vision model; it did not make the case
+for a 7B one. Serving 6 GB of weights for 70 seconds a page rules out a free
+live demo, so newer and smaller models were measured on the same four notebook
+pages, raw input, cached so every later change could be re-scored without them:
+
+| Model | Size | CER | formula error | exact | time, M4 |
+|---|---|---|---|---|---|
+| Qwen3.5 0.8B | 0.8B | 0.608 | 0.548 | 2/28 | 46s |
+| Qwen3.5 2B | 2B | 0.328 | 0.174 | 2/28 | 253s |
+| Qwen3.5 4B | 4B | 0.313 | 0.148 | 1/28 | 410s |
+| Qwen2.5-VL 7B | 7B | **0.225** | 0.159 | **7/28** | 294s |
+| GLM-OCR | 0.9B | 0.241 | **0.124** | 3/28 | 201s |
+
+GLM-OCR, a document OCR model rather than a general vision model, makes the
+fewest formula errors and writes LaTeX natively - including on the page where
+Qwen2.5-VL wrote `w1 * x` in plain text. It is what the demo runs. Qwen2.5-VL
+still leads on exact matches, and four pages do not separate the two with any
+confidence.
+
+Three things measured along the way:
+
+**Asking for LaTeX made it worse.** A prompt instructing Qwen to write all
+mathematics as LaTeX, aimed squarely at the plain-text page, raised formula
+error from 0.159 to 0.288 for Qwen2.5-VL and from 0.148 to 0.386 for Qwen3.5 4B,
+and did not fix that page: labels such as "=> Given:" were wrapped as maths too.
+The fourth intervention in this project that looked obviously right and measured
+wrong. Changing the model fixed what prompting could not.
+
+**Resolution is not a free latency lever for newer models.** Qwen3.5 4B at 1400px
+and 1024px saved 22% and 36% of the time while formula error rose to 0.192 and
+0.481.
+
+**Loops happen at page scale.** GLM-OCR wrote one page out in full twice and
+repeated a seventeen-line run on another. The doubled output scored as a total
+failure, so blocks of three or more lines that immediately repeat are collapsed
+for every backend.
+
+The hosted Space runs GLM-OCR through Transformers rather than Ollama, so it was
+scored separately rather than assumed equal: formula error 0.123 against 0.124,
+four pages in 23 seconds on a shared GPU. Individual symbols still differ now
+and then. On the Space, perspective and lighting correction raised formula error
+from 0.123 to 0.144, so the demo reads the raw photo.
+
+Board references are not yet comparable. The first three were written partly in
+plain-text notation (`1/2`, `\sqrt(...)`) that the LaTeX token metric scores as
+different from the model's correct `\frac{1}{2}`, so board scores are withheld
+until those references follow the convention.
+
 ## What preprocessing is measured to do
 
 Page detection went from 1 of 19 real photos to 19 of 19 when edge detection was

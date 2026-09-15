@@ -1,0 +1,13 @@
+{
+  "page_id": "allen-blunt-body",
+  "source": "data/eval/images/boards/allen-blunt-body.jpg",
+  "surface": "board",
+  "text": "at",
+  "formulas": [
+    "Q = (C_P S/ C_DA)(1/2  mV_E^2)",
+    "(dH_s/dt)_{max} = 6.8  *10^-6 \\sqrt(\\beta m sin \\theta_E / 3e C_D \\sigma A) V_E^3",
+    "y = 1/ \\beta ln(3C_{D}{\\rho_0}A / \\beta m sin\\theta_E)"
+  ],
+  "licence": "Public domain",
+  "note": "NACA, https://commons.wikimedia.org/wiki/File:H._Julian_Allen_with_Blunt_Body_Theory_-_A-22664.jpg"
+}

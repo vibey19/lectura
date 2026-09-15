@@ -1,125 +1,121 @@
 # Lectura
 
-Turn photographs of lecture material — handwritten notes, blackboards, slides —
-into structured, editable study notes with correctly rendered mathematics.
+Photograph handwritten notes, a blackboard or a slide, and get back structured,
+editable study notes with every equation typeset.
 
-Lectura is not an OCR wrapper. It keeps a canonical structured representation of
-what a page contained, tracks how confident it is about each piece, and keeps
-what was *read from the page* strictly separate from anything the model *added*.
+**[Try it live](https://lectura-murex.vercel.app)** · reads photos on a free GPU
+through a [Hugging Face Space](https://huggingface.co/spaces/Jainil19/lectura) ·
+no sign-up, nothing stored
 
-## Status
+![A blackboard photograph read into typeset equations](docs/demo.png)
 
-Working end to end: upload a photo, get structured notes with typeset
-mathematics, edit any block, switch themes, export. Smart Supplements and
-verification are not built yet.
+## What it does
 
-## Why
+- **Reads text and mathematics** from real lecture photos, including phone HEIC
+  files, and writes the mathematics as LaTeX.
+- **Rebuilds the structure** - headings, lists, equations, multi-line
+  derivations aligned on their `=` - as one canonical note, independent of how
+  it looks.
+- **Lets you correct it**: click any block to edit it with a live equation
+  preview, re-type blocks, reorder, undo, switch themes, export Markdown.
+- **Admits doubt**: uncertain blocks are flagged for review beside the source
+  photo, and confirming a block is recorded separately from editing it, so what
+  came off the page is never silently relabelled.
 
-Standard OCR fails on lecture material in a specific way. Measured on a set of
-real handwritten pages, Tesseract degraded with **mathematical density**, not
-handwriting quality:
+## How good is it?
 
-| Page content | Tesseract result |
+Every backend is scored against transcriptions written by hand, never copied
+from model output. Text and mathematics are scored separately, because
+classical OCR fails on notation long before it fails on prose.
+
+Four handwritten notebook pages, raw photos at 2200px, lower is better:
+
+| Backend | Size | Text error (CER) | Formula error | Exact formulas |
+|---|---|---|---|---|
+| Tesseract | - | 1.058 | 0.997 | 0/28 |
+| Pix2Text | - | 0.687 | 0.514 | 1/28 |
+| Qwen3.5 0.8B | 0.8B | 0.608 | 0.548 | 2/28 |
+| Qwen3.5 2B | 2B | 0.328 | 0.174 | 2/28 |
+| Qwen3.5 4B | 4B | 0.313 | 0.148 | 1/28 |
+| Qwen2.5-VL 7B | 7B | **0.225** | 0.159 | **7/28** |
+| **GLM-OCR** (deployed) | **0.9B** | 0.241 | **0.124** | 3/28 |
+
+GLM-OCR makes the fewest formula errors at under a quarter of the runner-up's
+size. The hosted Space was scored the same way and matches the benchmark
+(formula error 0.123) while reading four pages in 23 seconds instead of 201 on
+an M4.
+
+Four pages catch a large regression and settle nothing close. The labelled set
+also holds boards and slides now; see [ARCHITECTURE.md](ARCHITECTURE.md) for
+what was measured, including the fixes that looked right and measured worse.
+
+## How it works
+
+```
+photo ──► decode ──► model reads the page ──► structure ──► note ──► edit · theme · export
+          (HEIC,     (GLM-OCR: Markdown        (typed blocks,
+          rotation)   with LaTeX)               derivations, loops
+                                                collapsed)
+```
+
+Reading and organising are deliberately separate stages. Vision models read
+handwriting well but type document structure unreliably, so structuring runs on
+text alone: deterministic, unit-tested, and fixable without touching the model.
+Every backend sits behind one interface, so the baselines stay runnable and any
+claim of improvement can be re-measured with a flag.
+
+| Part | Where |
 |---|---|
-| Mostly prose, print handwriting | Usable, minor errors |
-| Prose with light notation | Headings survive, body degrades |
-| Dense derivations | Mostly collapse |
-| Pure algebra (roots, fractions, subscripts) | Total failure — 7 junk tokens from a full page |
+| Web app (React, KaTeX) | `frontend/`, deployed on Vercel |
+| GPU reading service (Gradio, ZeroGPU) | `space/`, deployed with `python space/deploy.py` |
+| Pipeline, structuring, schema | `src/lectura/` |
+| Evaluation harness and labelling tool | `src/lectura/evaluate/`, `data/eval/` |
 
-A vision-language model reads the same pages far better, including correct LaTeX
-for handwritten expressions. But it has failure modes of its own, which shape the
-design (see ARCHITECTURE.md).
+## Run it locally
 
-## Design commitments
-
-- **One canonical note model.** Themes, exports and the editor are views over
-  the same structure. Switching theme never re-runs a model.
-- **Extraction, verification and augmentation are separate.** Every block records
-  its `origin`. Generated additions are opt-in and visually distinct — the
-  source material is never silently rewritten.
-- **Uncertainty is part of the product.** Blocks carry confidence and warning
-  flags, and the interface surfaces doubtful blocks for review rather than
-  presenting everything as equally trustworthy.
-- **No paid inference API.** Everything runs on open weights.
-
-## Install
-
-Requires Python 3.11+ and [Ollama](https://ollama.com) for the vision model.
+Requires Python 3.11+ and [Ollama](https://ollama.com).
 
 ```bash
 uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
-ollama pull qwen2.5vl:7b
+ollama pull glm-ocr
+
+uvicorn lectura.api:app --port 8901        # web app at http://localhost:8901
+lectura path/to/photo.heic --theme academic   # or the command line
 ```
 
-Tesseract (the baseline backend) is optional: `brew install tesseract`.
+Build the web app into the API first with `cd frontend && npm install && npm run build`;
+`npm run dev` serves it with hot reload against port 8901.
 
-## Use
-
-Web app:
+## Measure it
 
 ```bash
-uvicorn lectura.api:app --port 8901       # then open http://localhost:8901
+lectura-eval                                   # GLM-OCR on the labelled set
+lectura-eval -m qwen2.5vl:7b                   # any Ollama vision model
+lectura-eval -b tesseract                      # baselines: tesseract, pix2text
+lectura-eval --cached-only --surface notebook  # re-score without calling a model
+lectura-label data/eval/images/boards --surface board   # add references by hand
 ```
 
-Upload a photo, click any block to edit it, switch theme, export Markdown.
-Editing an equation shows a live preview as you type.
-
-Command line:
-
-```bash
-lectura path/to/photo.heic --theme academic
-lectura out/photo.json --theme dark        # re-render, no model call
-```
-
-Writes a structured `.json` note and a rendered `.html` file to `./out`.
-
-```
-Options
-  -t, --theme      academic | dark | minimal | notebook
-  -b, --backend    vlm (default) | tesseract (baseline)
-  -m, --model      Ollama model name (default: qwen2.5vl:7b)
-      --max-edge   downscale longest edge; the main latency lever
-```
-
-Latency scales with pixel count, not content difficulty — roughly 20s for a
-small frame and 80–125s for a full-resolution phone photo on an M4.
+Raw model output is cached per page and configuration, so a change to
+structuring or scoring is re-measured in under a second.
 
 ## Development
 
 ```bash
-pytest                                  # python tests
-ruff check .                            # lint
-lectura-eval                            # score the VLM on the labelled set
-cd frontend && npm install && npm test && npm run build   # test and build the UI
+pytest && ruff check .                          # Python tests and lint
+cd frontend && npx tsc --noEmit && npm test     # type check and UI tests
 ```
 
-`lectura-eval` caches each page's raw extraction under `results/raw/`, so after
-the first run, changes to structuring or scoring are re-measured instantly. Pass
-`-b tesseract` or `-b pix2text` for the baselines, and `--refresh` to re-read.
-
-The frontend builds into `src/lectura/api/static`, which the API serves. For
-frontend work, `npm run dev` proxies API calls to port 8901.
-
-## How good is it?
-
-Measured against hand-written reference transcriptions on four real pages:
-
-| Backend | CER | formula error | exact | time |
-|---|---|---|---|---|
-| Tesseract | 1.058 | 0.997 | 0/28 | 2s |
-| Pix2Text | 0.689 | 0.510 | 1/28 | 8s |
-| Qwen2.5-VL 7B | 0.225 | 0.159 | 7/28 | 294s |
-
-Four pages is a small set - enough to catch a large regression, not enough to
-settle anything. See ARCHITECTURE.md for what these numbers do and do not say.
+CI runs both on every push.
 
 ## Privacy
 
-Lecture photographs can contain people, names, institutional branding and
-copyrighted teaching material. Lectura processes images in memory and stores
-nothing by default. Source images are gitignored and never committed.
+Lecture photographs can contain people and copyrighted teaching material.
+Images are processed in memory and never stored. Evaluation photos are
+gitignored; each reference records where its image came from and under what
+licence.
 
 ## Licence
 
-MIT — see LICENSE.
+MIT - see [LICENSE](LICENSE). GLM-OCR is MIT-licensed by Z.ai.

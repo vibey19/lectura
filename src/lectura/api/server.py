@@ -22,7 +22,8 @@ from PIL import UnidentifiedImageError
 from pydantic import BaseModel
 
 from lectura import ingest
-from lectura.extract import ExtractionError, OllamaVLM, Pix2TextOCR, Tesseract
+from lectura.extract import ExtractionError, Pix2TextOCR, Tesseract
+from lectura.extract.vlm import DEFAULT_MODEL, for_model
 from lectura.pipeline import ExtractResult, read_image
 from lectura.render import available_themes, render
 from lectura.schema import Note
@@ -57,7 +58,7 @@ _requests: dict[str, list[float]] = defaultdict(list)
 _requests_lock = threading.Lock()
 
 BACKENDS = {
-    "vlm": lambda: OllamaVLM(model=os.getenv("LECTURA_MODEL", "qwen2.5vl:7b")),
+    "vlm": lambda: for_model(os.getenv("LECTURA_MODEL", DEFAULT_MODEL)),
     "pix2text": Pix2TextOCR,
     "tesseract": Tesseract,
 }

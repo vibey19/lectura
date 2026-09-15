@@ -19,7 +19,7 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install --no-cache-dir -e .
 
-ENV LECTURA_MODEL=qwen2.5vl:7b \
+ENV LECTURA_MODEL=glm-ocr \
     OLLAMA_HOST=127.0.0.1:11434 \
     OLLAMA_KEEP_ALIVE=10m \
     PORT=7860

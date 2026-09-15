@@ -108,5 +108,5 @@ class GlmOcrTransformers(Extractor):
         if not items:
             raise ExtractionError("the model returned no readable text for this image")
         return RawExtraction(
-            items=items, backend=f"glm-ocr:{MODEL_ID}", seconds=round(elapsed, 1)
+            items=items, backend="GLM-OCR", seconds=round(elapsed, 1)
         )

@@ -110,6 +110,7 @@ export default function Landing() {
             <thead>
               <tr>
                 <th scope="col">Approach</th>
+                <th scope="col">Size</th>
                 <th scope="col">Text error</th>
                 <th scope="col">Formula error</th>
                 <th scope="col">Exact formulas</th>
@@ -118,23 +119,32 @@ export default function Landing() {
             <tbody>
               <tr>
                 <th scope="row">Classical OCR <span className="sub">Tesseract</span></th>
-                <td>1.058</td><td>0.997</td><td>0 / 28</td>
+                <td>—</td><td>1.058</td><td>0.997</td><td>0 / 28</td>
               </tr>
               <tr>
                 <th scope="row">Document pipeline <span className="sub">Pix2Text</span></th>
-                <td>0.689</td><td>0.510</td><td>1 / 28</td>
+                <td>—</td><td>0.687</td><td>0.514</td><td>1 / 28</td>
+              </tr>
+              <tr>
+                <th scope="row">Vision model <span className="sub">Qwen3.5 4B</span></th>
+                <td>4B</td><td>0.313</td><td>0.148</td><td>1 / 28</td>
+              </tr>
+              <tr>
+                <th scope="row">Vision model <span className="sub">Qwen2.5-VL 7B</span></th>
+                <td>7B</td><td>0.225</td><td>0.159</td><td>7 / 28</td>
               </tr>
               <tr className="best">
-                <th scope="row">Lectura <span className="sub">Qwen2.5-VL 7B</span></th>
-                <td>0.225</td><td>0.159</td><td>7 / 28</td>
+                <th scope="row">Lectura <span className="sub">GLM-OCR</span></th>
+                <td>0.9B</td><td>0.241</td><td>0.124</td><td>3 / 28</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p className="caveat">
-          Lower is better. Four pages is enough to catch a large regression and
-          not enough to settle anything — the set is growing, and these numbers
-          move with it.
+          Lower is better. The live demo runs GLM-OCR: the fewest formula errors
+          of everything measured, at under a quarter of the size of the
+          runner-up. Four notebook pages catch a large regression and settle
+          nothing close, so these numbers move as the labelled set grows.
         </p>
       </section>
 

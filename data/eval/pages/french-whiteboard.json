@@ -1,0 +1,26 @@
+{
+  "page_id": "french-whiteboard",
+  "source": "data/eval/images/boards/french-whiteboard.jpg",
+  "surface": "board",
+  "text": "compléter (d'après les propositions de Julie, Alexandra, Sarah) G D équivalent à idem ne pas effacer S.V.P.!",
+  "formulas": [
+    "5x + 10 = 20",
+    "5x =",
+    "2x + 10 = 7 + 5x",
+    "x + 10 = \\ldots",
+    "x - 5 = 1",
+    "2x - 5 = \\ldots",
+    "2x + 5 = 7",
+    "2x =",
+    "2x + 7 = 14",
+    "2x =",
+    "3x + 8 = 10",
+    "= 10 - 8",
+    "4x + 3 = 7",
+    "x + 3 = \\ldots",
+    "3x - 3 = 11",
+    "3x ="
+  ],
+  "licence": "CC BY-SA 3.0",
+  "note": "Luc Comeau-Montasse, https://commons.wikimedia.org/wiki/File:%C3%89quations-modifications.jpg"
+}

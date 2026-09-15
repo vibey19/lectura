@@ -55,7 +55,7 @@ docker run -p 7860:7860 \
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `LECTURA_MODEL` | `qwen2.5vl:7b` | Ollama model to serve |
+| `LECTURA_MODEL` | `glm-ocr` | Ollama model to serve |
 | `LECTURA_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated CORS origins |
 | `LECTURA_RATE_LIMIT` | `12` | Extractions per client per hour; 0 disables |
 | `LECTURA_TRUSTED_PROXIES` | `0` | Reverse proxies in front of the API; see below |

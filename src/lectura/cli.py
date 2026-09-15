@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 from lectura import ingest
-from lectura.extract import OllamaVLM, Tesseract
+from lectura.extract import Tesseract
+from lectura.extract.vlm import for_model
 from lectura.preprocess import preprocess
 from lectura.render import available_themes, write, write_json
 from lectura.schema import Note
@@ -28,7 +29,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-t", "--theme", default="academic",
                         choices=available_themes())
     parser.add_argument("-b", "--backend", default="vlm", choices=["vlm", "tesseract"])
-    parser.add_argument("-m", "--model", default="qwen2.5vl:7b")
+    parser.add_argument("-m", "--model", default="glm-ocr",
+                        help="Ollama model (default: glm-ocr, the best measured)")
     parser.add_argument("--max-edge", type=int, default=2200,
                         help="downscale longest edge; drives latency (default: 2200)")
     parser.add_argument("--no-preprocess", action="store_true",
@@ -61,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     image = ingest.fit_within(image, args.max_edge)
 
     extractor = (
-        Tesseract() if args.backend == "tesseract" else OllamaVLM(model=args.model)
+        Tesseract() if args.backend == "tesseract" else for_model(args.model)
     )
 
     print(f"extracting with {extractor.name} at {image.width}x{image.height} ...")

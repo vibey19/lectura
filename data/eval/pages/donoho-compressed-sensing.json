@@ -1,0 +1,9 @@
+{
+  "page_id": "donoho-compressed-sensing",
+  "source": "data/eval/images/slides/donoho-compressed-sensing.jpg",
+  "surface": "slide",
+  "text": "Compressed sensing: the basic heuristics Study compressible signals having sparsifying transforms Undersample incoherently e.g. with randomness or quassi randomness Non-linearly reconstruct by promoting sparsity Credit: Micheal Lusting INTERNATIONAL CONGRESS OF MATHAMATICIANS",
+  "formulas": [],
+  "licence": "Public domain",
+  "note": "ICM 2018, https://commons.wikimedia.org/wiki/File:David_Donoho_ICM_2018_(43911809701).jpg"
+}

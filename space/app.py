@@ -57,9 +57,8 @@ def extract(photo: str | None, use_preprocess: bool = False) -> dict:
                             source_name=path.name)
     except ExtractionError as exc:
         raise gr.Error(str(exc)) from exc
-    body = result.model_dump(mode="json")
-    body["backend"] += f" ({model.dtype}, {model.config._attn_implementation})"
-    return body
+    print(f"read {path.name} in {result.seconds}s ({model.dtype})", flush=True)
+    return result.model_dump(mode="json")
 
 
 with gr.Blocks(title="Lectura") as demo:

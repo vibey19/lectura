@@ -69,12 +69,28 @@ PROMPTS = {"v1": PROMPT, "v2": PROMPT_V2}
 MARKDOWN_PROMPT = "Text Recognition:"
 
 
+DEFAULT_MODEL = "glm-ocr"
+
+
+def for_model(model: str = DEFAULT_MODEL, **kwargs) -> OllamaVLM:
+    """An extractor configured the way `model` was benchmarked.
+
+    GLM-OCR answers a task prompt in Markdown; general VLMs follow the JSON
+    transcription prompt, and reasoning models need thinking switched off.
+    """
+    if model.startswith("glm-ocr"):
+        kwargs.setdefault("output", "markdown")
+    elif model.startswith("qwen3"):
+        kwargs.setdefault("think", False)
+    return OllamaVLM(model=model, **kwargs)
+
+
 class OllamaVLM(Extractor):
     name = "ollama-vlm"
 
     def __init__(
         self,
-        model: str = "qwen2.5vl:7b",
+        model: str = "qwen2.5vl:7b",   # for_model() applies the measured default
         host: str = DEFAULT_HOST,
         num_ctx: int = 16384,
         num_predict: int = 4096,

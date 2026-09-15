@@ -1,0 +1,13 @@
+{
+  "page_id": "fermi-blackboard",
+  "source": "data/eval/images/boards/fermi-blackboard.jpg",
+  "surface": "board",
+  "text": "",
+  "formulas": [
+    "-\\frac{\\hbar}{i}\\frac{\\partial}{\\partial t} =\\frac{p^2}{2m} - \\frac{Ze^2}{r}",
+    "\\alpha = \\frac{\\hbar^2}{ec}",
+    "-i\\hbar\\frac{\\partial \\psi}{\\partial t} = \\left(\\frac{p^2}{2m} - \\frac{Ze^2}{r} \\right)\\psi"
+  ],
+  "licence": "Public domain",
+  "note": "Smithsonian Institution, https://commons.wikimedia.org/wiki/File:Enrico_Fermi_at_the_blackboard.jpg"
+}
