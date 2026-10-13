@@ -3,30 +3,23 @@
 Photograph handwritten notes, a blackboard or a slide, and get back structured,
 editable study notes with every equation typeset.
 
-**[Try it live](https://lectura-murex.vercel.app)** · reads photos on a free GPU
-through a [Hugging Face Space](https://huggingface.co/spaces/Jainil19/lectura) ·
-no sign-up, nothing stored
+**[Try it live](https://lectura-murex.vercel.app)** · runs on a free GPU through a
+[Hugging Face Space](https://huggingface.co/spaces/Jainil19/lectura) · no sign-up, nothing stored
 
 ![Lectura reading a blackboard photograph into editable, typeset notes](docs/demo.gif)
 
 ## What it does
 
-- **Reads text and mathematics** from real lecture photos, including phone HEIC
-  files, and writes the mathematics as LaTeX.
-- **Rebuilds the structure** - headings, lists, equations, multi-line
-  derivations aligned on their `=` - as one canonical note, independent of how
-  it looks.
-- **Lets you correct it**: click any block to edit it with a live equation
-  preview, re-type blocks, reorder, undo, switch themes, export Markdown.
-- **Admits doubt**: uncertain blocks are flagged for review beside the source
-  photo, and confirming a block is recorded separately from editing it, so what
-  came off the page is never silently relabelled.
+- **Reads text and mathematics** from real lecture photos, phone HEIC included, and writes the mathematics as LaTeX.
+- **Rebuilds the structure** - headings, lists, multi-line derivations aligned on their `=` - as one canonical note.
+- **Lets you correct it** - click any block to edit it with a live equation preview; reorder, undo, switch themes, export Markdown.
+- **Admits doubt** - uncertain blocks are flagged beside the source photo, and confirming a block is recorded separately from editing it.
 
 ## How good is it?
 
-Every backend is scored against transcriptions written by hand, never copied
-from model output. Text and mathematics are scored separately, because
-classical OCR fails on notation long before it fails on prose.
+Scored against transcriptions written by hand, never copied from model output.
+Text and mathematics are scored separately, because classical OCR fails on
+notation long before it fails on prose.
 
 Four handwritten notebook pages, raw photos at 2200px, lower is better:
 
@@ -40,14 +33,9 @@ Four handwritten notebook pages, raw photos at 2200px, lower is better:
 | Qwen2.5-VL 7B | 7B | **0.225** | 0.159 | **7/28** |
 | **GLM-OCR** (deployed) | **0.9B** | 0.241 | **0.124** | 3/28 |
 
-GLM-OCR makes the fewest formula errors at under a quarter of the runner-up's
-size. The hosted Space was scored the same way and matches the benchmark
-(formula error 0.123) while reading four pages in 23 seconds instead of 201 on
-an M4.
-
-Four pages catch a large regression and settle nothing close. The labelled set
-also holds boards and slides now; see [ARCHITECTURE.md](ARCHITECTURE.md) for
-what was measured, including the fixes that looked right and measured worse.
+- GLM-OCR makes the fewest formula errors at under a quarter of the runner-up's size.
+- The hosted Space was scored the same way, matches the benchmark (formula error 0.123), and reads four pages in 23s against 201s on an M4.
+- Four pages catch a large regression and settle nothing close; the labelled set also holds boards and slides. See [ARCHITECTURE.md](ARCHITECTURE.md) for what was measured, including the fixes that looked right and measured worse.
 
 ## How it works
 
@@ -58,11 +46,8 @@ photo ──► decode ──► model reads the page ──► structure ──
                                                 collapsed)
 ```
 
-Reading and organising are deliberately separate stages. Vision models read
-handwriting well but type document structure unreliably, so structuring runs on
-text alone: deterministic, unit-tested, and fixable without touching the model.
-Every backend sits behind one interface, so the baselines stay runnable and any
-claim of improvement can be re-measured with a flag.
+- Reading and organising are deliberately separate stages: vision models read handwriting well but type document structure unreliably, so structuring runs on text alone - deterministic, unit-tested, and fixable without touching the model.
+- Every backend sits behind one interface, so the baselines stay runnable and any claim of improvement can be re-measured with a flag.
 
 | Part | Where |
 |---|---|
@@ -80,12 +65,12 @@ uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 ollama pull glm-ocr
 
-uvicorn lectura.api:app --port 8901        # web app at http://localhost:8901
-lectura path/to/photo.heic --theme academic   # or the command line
+cd frontend && npm install && npm run build    # build the web app into the API
+uvicorn lectura.api:app --port 8901            # web app at http://localhost:8901
+lectura path/to/photo.heic --theme academic    # or the command line
 ```
 
-Build the web app into the API first with `cd frontend && npm install && npm run build`;
-`npm run dev` serves it with hot reload against port 8901.
+`npm run dev` serves the frontend with hot reload against port 8901.
 
 ## Measure it
 
@@ -111,10 +96,9 @@ CI runs both on every push.
 
 ## Privacy
 
-Lecture photographs can contain people and copyrighted teaching material.
-Images are processed in memory and never stored. Evaluation photos are
-gitignored; each reference records where its image came from and under what
-licence.
+Lecture photographs can contain people and copyrighted teaching material. Images
+are processed in memory and never stored. Evaluation photos are gitignored; each
+reference records where its image came from and under what licence.
 
 ## Licence
 
